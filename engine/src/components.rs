@@ -1,15 +1,18 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 
 // Components can be stored in vecs or hashmaps
 // All components should have an bool "sparse"
+pub trait ComponentType {
+    const sparse: bool;
+}
 
-trait ComponentStorage {
+pub trait ComponentStorage {
     fn as_any(&self) -> &dyn std::any::Any;
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
     fn push_none(&mut self);
 }
 
-impl<T> ComponentStorage for Vec<Option<T>> {
+impl<T: 'static> ComponentStorage for RefCell<Vec<Option<T>>> {
     fn as_any(&self) -> &dyn std::any::Any {
         self as &dyn std::any::Any
     }
@@ -18,11 +21,11 @@ impl<T> ComponentStorage for Vec<Option<T>> {
         self as &mut dyn std::any::Any
     }
     fn push_none(&mut self) {
-        self.push(None)
+        self.get_mut().push(None)
     }
 }
 
-impl<T> ComponentStorage for Hashmap<usize, T> {
+impl<T: 'static> ComponentStorage for HashMap<usize, T> {
     fn as_any(&self) -> &dyn std::any::Any {
         self as &dyn std::any::Any
     }

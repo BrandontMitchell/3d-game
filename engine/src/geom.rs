@@ -8,6 +8,7 @@ pub const PI: f32 = std::f32::consts::PI;
 
 pub trait Shape {
     fn translate(&mut self, v: Vec3);
+    fn type_of(&self) -> &'static str;
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -20,6 +21,9 @@ impl Shape for Sphere {
     fn translate(&mut self, v: Vec3) {
         self.c += v;
     }
+    fn type_of(&self) -> &'static str {
+        "Sphere"
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -31,6 +35,9 @@ pub struct Plane {
 impl Shape for Plane {
     fn translate(&mut self, _v: Vec3) {
         panic!();
+    }
+    fn type_of(&self) -> &'static str {
+        "Plane"
     }
 }
 
@@ -45,6 +52,9 @@ impl Shape for Box {
     fn translate(&mut self, v: Vec3) {
         self.c += v;
     }
+    fn type_of(&self) -> &'static str {
+        "Box"
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -57,6 +67,9 @@ impl Shape for AABB {
     fn translate(&mut self, v: Vec3) {
         self.c += v;
     }
+    fn type_of(&self) -> &'static str {
+        "AABB"
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -68,6 +81,9 @@ pub struct Ray {
 impl Shape for Ray {
     fn translate(&mut self, v: Vec3) {
         self.p += v;
+    }
+    fn type_of(&self) -> &'static str {
+        "Ray"
     }
 }
 
