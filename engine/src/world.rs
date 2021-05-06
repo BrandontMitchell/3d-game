@@ -56,16 +56,16 @@ impl World {
     }
 
     // remove an entity from the world
-    // pub fn remove_entity(&mut self, id: usize) {
-    //     for component_vec in self.components.iter_mut() {
-    //         if let Some(component_vec) = component_vec
-    //                 .as_any_mut()
-    //                 .downcast_mut::<RefCell<Vec<Option<_>>>>()
-    //             {
-    //                 component_vec.get_mut()[id] = None;
-    //             }
-    //     }
-    // }
+    pub fn remove_entity<ComponentType: 'static>(&mut self, id: usize) {
+        for component_vec in self.components.iter_mut() {
+            if let Some(component_vec) = component_vec
+                .as_any_mut()
+                .downcast_mut::<RefCell<Vec<Option<ComponentType>>>>()
+            {
+                component_vec.get_mut()[id] = None;
+            }
+        }
+    }
 
     // get a component vec
     pub fn borrow_component_vec_mut<ComponentType: 'static>(

@@ -9,11 +9,11 @@ use rand;
 use winit;
 
 const NUM_MARBLES: usize = 10;
-const G: f32 = 1.0;
+const G: f32 = 10.0;
 
 // leaving all "sparse" as false for now
-pub struct Body_Plane(Plane);
-pub struct Body_Sphere(Sphere);
+pub struct BodyPlane(Plane);
+pub struct BodySphere(Sphere);
 // impl ComponentType for Body {
 //     const sparse: bool = false;
 // }
@@ -59,18 +59,14 @@ struct GameData {
 impl Game {
     fn integrate(&mut self) {
         // needs body, vels, accs, rots, omegas, and controls
-        
-        let mut planes = self.world.borrow_component_vec_mut::<Body_Plane>().unwrap();
+
+        let mut planes = self.world.borrow_component_vec_mut::<BodyPlane>().unwrap();
         let controls = self.world.borrow_component_vec_mut::<Control>().unwrap();
 
         for (id, body) in planes.iter_mut().enumerate() {
             if let Some(body) = body {
                 if let Some(c) = &controls[id] {
-                    body.0.n += Vec3::new(
-                        c.0.0 as f32 * 0.4 * DT,
-                        0.0,
-                        c.0.1 as f32 * 0.4 * DT,
-                    );
+                    body.0.n += Vec3::new(c.0 .0 as f32 * 0.4 * DT, 0.0, c.0 .1 as f32 * 0.4 * DT);
                     body.0.n = body.0.n.normalize();
                 }
             }
@@ -78,7 +74,7 @@ impl Game {
 
         let mut spheres = self
             .world
-            .borrow_component_vec_mut::<Body_Sphere>()
+            .borrow_component_vec_mut::<BodySphere>()
             .unwrap();
         let mut vels = self.world.borrow_component_vec_mut::<Velocity>().unwrap();
         let mut accs = self
@@ -110,7 +106,6 @@ impl Game {
             r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
         }
     }
-
 }
 
 impl engine3d::Game for Game {
@@ -123,7 +118,7 @@ impl engine3d::Game for Game {
         let wall = world.add_entity();
         world.add_component(
             wall,
-            Body_Plane(Plane {
+            BodyPlane(Plane {
                 n: Vec3::new(0.0, 1.0, 0.0),
                 d: 0.0,
             }),
@@ -134,7 +129,7 @@ impl engine3d::Game for Game {
         let player = world.add_entity();
         world.add_component(
             player,
-            Body_Sphere(Sphere {
+            BodySphere(Sphere {
                 c: Pos3::new(0.0, 3.0, 0.0),
                 r: 0.3,
             }),
@@ -150,10 +145,7 @@ impl engine3d::Game for Game {
         world.add_component(wall, Model(wall_model));
         world.add_component(player, Model(player_model));
         (
-            Self {
-                world,
-                pw: vec![],
-            },
+            Self { world, pw: vec![] },
             GameData {
                 wall_model,
                 player_model,
@@ -164,9 +156,9 @@ impl engine3d::Game for Game {
         // need shapes, their rotations, and their models
         let spheres = self
             .world
-            .borrow_component_vec_mut::<Body_Sphere>()
+            .borrow_component_vec_mut::<BodySphere>()
             .unwrap();
-        let planes = self.world.borrow_component_vec_mut::<Body_Plane>().unwrap();
+        let planes = self.world.borrow_component_vec_mut::<BodyPlane>().unwrap();
         let models = self.world.borrow_component_vec_mut::<Model>().unwrap();
         let rots = self.world.borrow_component_vec_mut::<Rot>().unwrap();
 
@@ -205,10 +197,12 @@ impl engine3d::Game for Game {
     }
 
     fn update(&mut self, engine: &mut Engine) {
-
-        let mut accs = self.world.borrow_component_vec_mut::<Acceleration>().unwrap();
+        let mut accs = self
+            .world
+            .borrow_component_vec_mut::<Acceleration>()
+            .unwrap();
         let mut omegas = self.world.borrow_component_vec_mut::<Omega>().unwrap();
-        
+
         // IF WE WANT PLAYER CONTROLS INSTEAD OF PLANE CONTROLS
         //
         // // player is currently the only thing w acceleration, so search by that for now
@@ -240,7 +234,7 @@ impl engine3d::Game for Game {
         //         }
         //     }
         // }
-        
+
         // only one thing is controllable, so its fine for now
         let mut controls = self.world.borrow_component_vec_mut::<Control>().unwrap();
         for c in controls.iter_mut() {
@@ -263,16 +257,12 @@ impl engine3d::Game for Game {
         }
 
         // integrate planes
-        let mut planes = self.world.borrow_component_vec_mut::<Body_Plane>().unwrap();
+        let mut planes = self.world.borrow_component_vec_mut::<BodyPlane>().unwrap();
 
         for (id, body) in planes.iter_mut().enumerate() {
             if let Some(body) = body {
                 if let Some(c) = &controls[id] {
-                    body.0.n += Vec3::new(
-                        c.0.0 as f32 * 0.4 * DT,
-                        0.0,
-                        c.0.1 as f32 * 0.4 * DT,
-                    );
+                    body.0.n += Vec3::new(c.0 .0 as f32 * 0.4 * DT, 0.0, c.0 .1 as f32 * 0.4 * DT);
                     body.0.n = body.0.n.normalize();
                 }
             }
@@ -282,7 +272,7 @@ impl engine3d::Game for Game {
         // also sorry this is so gross
         let mut spheres = self
             .world
-            .borrow_component_vec_mut::<Body_Sphere>()
+            .borrow_component_vec_mut::<BodySphere>()
             .unwrap();
         let mut vels = self.world.borrow_component_vec_mut::<Velocity>().unwrap();
         let mut rots = self.world.borrow_component_vec_mut::<Rot>().unwrap();
