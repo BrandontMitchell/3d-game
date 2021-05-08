@@ -8,8 +8,9 @@ use engine3d::{
 use rand;
 use winit;
 
-const NUM_MARBLES: usize = 10;
 const G: f32 = 10.0;
+const MAX_PLAYER_VELOCITY: f32 = 20.0;
+const PLANE_ROT_SPEED: f32 = 0.6;
 
 // leaving all "sparse" as false for now
 pub struct BodyPlane(Plane);
@@ -47,6 +48,9 @@ pub struct Model(engine3d::assets::ModelRef);
 //     const sparse: bool = false;
 // }
 
+pub struct Linear_Momentum(Vec3);
+pub struct Mass(f32);
+
 struct Game {
     world: World,
     pw: Vec<collision::Contact<usize>>,
@@ -58,53 +62,7 @@ struct GameData {
 
 impl Game {
     fn integrate(&mut self) {
-        // needs body, vels, accs, rots, omegas, and controls
-
-        let mut planes = self.world.borrow_component_vec_mut::<BodyPlane>().unwrap();
-        let controls = self.world.borrow_component_vec_mut::<Control>().unwrap();
-
-        for (id, body) in planes.iter_mut().enumerate() {
-            if let Some(body) = body {
-                if let Some(c) = &controls[id] {
-                    body.0.n += Vec3::new(c.0 .0 as f32 * 0.4 * DT, 0.0, c.0 .1 as f32 * 0.4 * DT);
-                    body.0.n = body.0.n.normalize();
-                }
-            }
-        }
-
-        let mut spheres = self
-            .world
-            .borrow_component_vec_mut::<BodySphere>()
-            .unwrap();
-        let mut vels = self.world.borrow_component_vec_mut::<Velocity>().unwrap();
-        let mut accs = self
-            .world
-            .borrow_component_vec_mut::<Acceleration>()
-            .unwrap();
-        let mut rots = self.world.borrow_component_vec_mut::<Rot>().unwrap();
-        let mut omegas = self.world.borrow_component_vec_mut::<Omega>().unwrap();
-        let zip = spheres
-            .iter_mut()
-            .zip(vels.iter_mut())
-            .zip(accs.iter_mut())
-            .zip(rots.iter_mut())
-            .zip(omegas.iter_mut());
-        let iter = zip.filter_map(|((((body, v), a), r), o)| {
-            Some((
-                body.as_mut()?,
-                v.as_mut()?,
-                a.as_mut()?,
-                r.as_mut()?,
-                o.as_mut()?,
-            ))
-        });
-
-        for (body, v, a, r, o) in iter {
-            // control sphere (includes the player)
-            v.0 += ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
-            body.0.c += v.0 * DT;
-            r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
-        }
+    
     }
 }
 
@@ -125,7 +83,7 @@ impl engine3d::Game for Game {
         );
         world.add_component(wall, Control((0, 0)));
 
-        // player has body, vel, acc, omega, and rot
+        // player has body, vel, acc, omega, rot, momentum, and mass
         let player = world.add_entity();
         world.add_component(
             player,
@@ -138,6 +96,12 @@ impl engine3d::Game for Game {
         world.add_component(player, Acceleration(Vec3::zero()));
         world.add_component(player, Omega(Vec3::zero()));
         world.add_component(player, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
+        world.add_component(player, Linear_Momentum(Vec3::zero()));
+        let mut mass = 0.0;
+        if let Some(body) = &world.borrow_component_vec_mut::<BodySphere>().unwrap()[player] {
+            mass = (body.0.r * 4.0).powi(3);
+        }
+        world.add_component(player, Mass(mass));
 
         // add models to wall and player
         let wall_model = engine.load_model("floor.obj");
@@ -262,42 +226,21 @@ impl engine3d::Game for Game {
         for (id, body) in planes.iter_mut().enumerate() {
             if let Some(body) = body {
                 if let Some(c) = &controls[id] {
-                    body.0.n += Vec3::new(c.0 .0 as f32 * 0.4 * DT, 0.0, c.0 .1 as f32 * 0.4 * DT);
+                    body.0.n += Vec3::new(c.0.0 as f32 * PLANE_ROT_SPEED * DT, 0.0, c.0.1 as f32 * PLANE_ROT_SPEED * DT);
                     body.0.n = body.0.n.normalize();
                 }
             }
         }
 
         // integrate spheres
-        // also sorry this is so gross
         let mut spheres = self
             .world
             .borrow_component_vec_mut::<BodySphere>()
             .unwrap();
         let mut vels = self.world.borrow_component_vec_mut::<Velocity>().unwrap();
         let mut rots = self.world.borrow_component_vec_mut::<Rot>().unwrap();
-        let zip = spheres
-            .iter_mut()
-            .zip(vels.iter_mut())
-            .zip(accs.iter_mut())
-            .zip(rots.iter_mut())
-            .zip(omegas.iter_mut());
-        let iter = zip.filter_map(|((((body, v), a), r), o)| {
-            Some((
-                body.as_mut()?,
-                v.as_mut()?,
-                a.as_mut()?,
-                r.as_mut()?,
-                o.as_mut()?,
-            ))
-        });
-
-        for (body, v, a, r, o) in iter {
-            // control sphere (includes the player)
-            v.0 += ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
-            body.0.c += v.0 * DT;
-            r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
-        }
+        let mut ps = self.world.borrow_component_vec_mut::<Linear_Momentum>().unwrap();
+        let mut masses = self.world.borrow_component_vec_mut::<Mass>().unwrap();
 
         // collisions between player and floor
         self.pw.clear();
@@ -309,8 +252,11 @@ impl engine3d::Game for Game {
             }
         }
 
+        // get values for bodies, velocities, momentums, and masses for collision
         let mut pb = vec![];
         let mut pv = vec![];
+        let mut pp = vec![];
+        let mut pm = vec![];
         let mut player_id = 0;
 
         for (id, s) in spheres.iter().enumerate() {
@@ -320,16 +266,22 @@ impl engine3d::Game for Game {
                 if let Some(v) = &vels[id] {
                     pv.push(v.0);
                 }
+                if let Some(p) = &ps[id] {
+                    pp.push(p.0);
+                }
+                if let Some(m) = &masses[id] {
+                    pm.push(m.0);
+                }
             }
         }
 
         collision::gather_contacts_ab(&pb, &walls, &mut self.pw);
-        collision::restitute_dyn_stat(&mut pb, &mut pv, &walls, &mut self.pw);
+        collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
         if let Some(body) = &mut spheres[player_id] {
             body.0 = pb[0];
         }
-        if let Some(v) = &mut vels[player_id] {
-            v.0 = pv[0];
+        if let Some(p) = &mut ps[player_id] {
+            p.0 = pp[0];
         }
 
         for collision::Contact { a: pa, .. } in self.pw.iter() {
@@ -337,6 +289,33 @@ impl engine3d::Game for Game {
             assert_eq!(*pa, 0);
             if let Some(v) = &mut vels[player_id] {
                 v.0 *= 0.98;
+            }
+        }
+
+        // update spheres (apply gravity, momentum, etc)
+        // hopefully this can be less gross if i do the sparse thing
+        for (id, body) in spheres.iter_mut().enumerate() {
+            // control sphere (includes the player)
+            if let Some(body) = body {
+                if let Some(p) = &mut ps[id] {
+                    if let Some(v) = &mut vels[id] {
+                        if let Some(m) = &masses[id] {
+                            if let Some(r) = &mut rots[id] {
+                                if let Some(a) = &accs[id] {
+                                    if let Some(o) = &omegas[id] {
+                                        p.0 += ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
+                                        v.0 = p.0 / m.0;
+                                        if v.0.magnitude() > MAX_PLAYER_VELOCITY {
+                                            v.0 = v.0.normalize_to(MAX_PLAYER_VELOCITY);
+                                        }
+                                        body.0.c += v.0 * DT;
+                                        r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

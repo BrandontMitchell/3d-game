@@ -9,7 +9,9 @@ pub struct Contact<T: Copy> {
 
 pub fn restitute_dyn_stat<S1: Shape, S2: Shape>(
     ashapes: &mut [S1],
-    avels: &mut [Vec3],
+    avels: &[Vec3],
+    aps: &mut [Vec3],
+    amasses: &[f32],
     bshapes: &[S2],
     contacts: &mut [Contact<usize>],
 ) where
@@ -29,7 +31,9 @@ pub fn restitute_dyn_stat<S1: Shape, S2: Shape>(
             // units) to velocity (in units/frame), but we'll roll
             // with it.  We're not exactly modeling a normal force
             // here but it's something like that.
-            avels[a] += disp;
+            let elasticity = 0.5;
+            let j = (-(1.0 + elasticity) * (avels[a] * amasses[a]).dot(disp.normalize())).max(0.0);
+            aps[a] += j * disp.normalize();
         }
     }
 }
