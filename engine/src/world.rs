@@ -4,6 +4,9 @@ use std::{
     collections::HashMap,
 };
 
+// Implementation based on:
+// https://ianjk.com/ecs-in-rust/
+
 pub struct World {
     num_entities: usize,
     components: Vec<Box<dyn ComponentStorage>>, // VECS ONLY
