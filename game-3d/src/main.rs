@@ -1,10 +1,7 @@
 use std::borrow::BorrowMut;
 
 use cgmath::{Quaternion, Rotation};
-use engine3d::{
-    assets::ModelRef, collision, events::*, geom::*, render::InstanceGroups, run, world::World,
-    Engine, DT, components::Component
-};
+use engine3d::{DT, Engine, assets::ModelRef, collision, components::Component, events::*, geom::*, lights::Light, render::InstanceGroups, run, world::World};
 use rand;
 use winit;
 //use winit::window::WindowBuilder;
@@ -108,6 +105,7 @@ enum Mode {
 struct Game {
     world: World,
     pw: Vec<collision::Contact<usize>>,
+    light: Light,
 }
 struct GameData {
     wall_model: engine3d::assets::ModelRef,
@@ -227,7 +225,6 @@ impl engine3d::Game for Game {
     type StaticData = GameData;
     
     fn start(engine: &mut Engine) -> (Self, Self::StaticData) {
-        use rand::Rng;
         let mut world = World::new();
 
         // wall has body and control
@@ -264,8 +261,11 @@ impl engine3d::Game for Game {
         let player_model = engine.load_model("sphere.obj");
         world.add_component(wall, Model(wall_model));
         world.add_component(player, Model(player_model));
+
+        engine.set_ambient(0.05);
+        let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
         (
-            Self { world, pw: vec![] },
+            Self { world, pw: vec![], light },
             GameData {
                 wall_model,
                 player_model,
@@ -449,6 +449,28 @@ impl engine3d::Game for Game {
                 }
             }
         }
+
+        // lights
+        let light_pos = self.light.position();
+        let light_pos = if engine.events.key_held(KeyCode::A) {
+            Quat::from(cgmath::Euler::new(
+                cgmath::Deg(0.0),
+                cgmath::Deg(-90.0 * DT),
+                cgmath::Deg(0.0),
+            ))
+            .rotate_point(light_pos)
+        } else if engine.events.key_held(KeyCode::D) {
+            Quat::from(cgmath::Euler::new(
+                cgmath::Deg(0.0),
+                cgmath::Deg(90.0 * DT),
+                cgmath::Deg(0.0),
+            ))
+            .rotate_point(light_pos)
+        } else {
+            light_pos
+        };
+        self.light = Light::point(light_pos, self.light.color());
+        engine.set_lights(vec![self.light]);
     }
 }
 

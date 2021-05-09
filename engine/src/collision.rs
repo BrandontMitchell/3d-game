@@ -1,3 +1,5 @@
+use cgmath::Vector3;
+
 use crate::geom::*;
 
 #[derive(Clone, Copy, Debug)]
@@ -26,14 +28,12 @@ pub fn restitute_dyn_stat<S1: Shape, S2: Shape>(
         if let Some(disp) = ashapes[a].disp(&bshapes[b]) {
             // We can imagine we're instantaneously applying a
             // velocity change to pop the object just above the floor.
-            ashapes[a].translate(disp);
-            // It feels a little weird to be adding displacement (in
-            // units) to velocity (in units/frame), but we'll roll
-            // with it.  We're not exactly modeling a normal force
-            // here but it's something like that.
-            let elasticity = 0.5;
-            let j = (-(1.0 + elasticity) * (avels[a] * amasses[a]).dot(disp.normalize())).max(0.0);
-            aps[a] += j * disp.normalize();
+            if disp.magnitude() > 0.0 {
+                ashapes[a].translate(disp);
+                let elasticity = 0.5;
+                let j = (-(1.0 + elasticity) * (avels[a] * amasses[a]).dot(disp.normalize())).max(0.0);
+                aps[a] += j * disp.normalize();
+            }
         }
     }
 }
