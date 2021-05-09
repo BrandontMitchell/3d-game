@@ -3,14 +3,28 @@ use std::borrow::BorrowMut;
 use cgmath::{Quaternion, Rotation};
 use engine3d::{
     assets::ModelRef, collision, events::*, geom::*, render::InstanceGroups, run, world::World,
-    Engine, DT,
+    Engine, DT
 };
 use rand;
 use winit;
 
+use engine3d::src::screen;
+
+use winit_input_helper::WinitInputHelper;
+use winit::event::{Event, VirtualKeyCode};
+extern crate savefile;
+use savefile::prelude::*;
+//use pixels::{Pixels, SurfaceTexture};
+
+extern crate savefile_derive;
+
 const G: f32 = 10.0;
 const MAX_PLAYER_VELOCITY: f32 = 20.0;
 const PLANE_ROT_SPEED: f32 = 0.6;
+
+const DEPTH: usize = 4;
+const WIDTH: usize = 800;
+const HEIGHT: usize = 500;
 
 // leaving all "sparse" as false for now
 pub struct BodyPlane(Plane);
@@ -51,6 +65,14 @@ pub struct Model(engine3d::assets::ModelRef);
 pub struct Linear_Momentum(Vec3);
 pub struct Mass(f32);
 
+#[derive(Debug, Copy, Clone)]
+enum Mode {
+    Title,
+    Play(bool),
+    Options,
+    EndGame,
+}
+
 struct Game {
     world: World,
     pw: Vec<collision::Contact<usize>>,
@@ -60,6 +82,107 @@ struct GameData {
     player_model: engine3d::assets::ModelRef,
 }
 
+impl Mode {
+    // update consumes self and yields a new state (which might also just be self)
+    fn update(self, input: &WinitInputHelper) -> Self {
+        match self {
+            Mode::Title => {
+                if input.key_pressed(VirtualKeyCode::P) {
+                    Mode::Play(false)
+                }
+                else if input.key_pressed(VirtualKeyCode::O) {
+                    Mode::Options
+                } 
+                else if input.key_pressed(VirtualKeyCode::Q) {
+                    panic!();
+                }
+                else {
+                    self
+                }
+            }
+            //actively playing
+            Mode::Play(paused) => {
+                if !paused {
+                    //update game
+                }
+                else if input.key_pressed(VirtualKeyCode::Space) {
+                    Mode::Play(!paused)
+                }
+                else if input.key_pressed(VirtualKeyCode::T) {
+                    Mode::Title
+                }
+                else if input.key_pressed(VirtualKeyCode::Q) {
+                    panic!();
+                }
+                else if input.key_pressed(VirtualKeyCode::O) {
+                    Mode::Options
+                }
+                else {
+                    self
+                }
+            }
+            Mode::Options => {
+                if input.key_pressed(VirtualKeyCode::T) {
+                    Mode::Title
+                }
+                else if input.key_pressed(VirtualKeyCode::P) {
+                    Mode::Play(false)
+                }
+                else if input.key_pressed(VirtualKeyCode::Q) {
+                    panic!();
+                }
+                else {
+                    self
+                }
+            }
+            //on play screen while dead
+            Mode::EndGame => {
+                if input.key_pressed(VirtualKeyCode::T) {
+                    Mode::Title
+                }
+                else if input.key_pressed(VirtualKeyCode::P) {
+                    Mode::Play(false)
+                }
+                else if input.key_pressed(VirtualKeyCode::T) {
+                    Mode::Title
+                }
+                else if input.key_pressed(VirtualKeyCode::Q) {
+                    panic!();
+                }
+                else if input.key_pressed(VirtualKeyCode::O) {
+                    Mode::Options
+                }
+                else {
+                    self
+                }
+            }
+        }
+    }
+    fn display(&self, screen: &mut Screen) {
+        match self {
+            Mode::Title => {
+                //draw a (static?) title
+                screen.clear(Rgba(0, 0, 0, 255));
+                let display_rect = Rect {
+                    x: 0,
+                    y: 0,
+                    w: 250,
+                    h: 51,
+                };
+            }
+            Mode::Play(_paused) => {
+                // Call screen's drawing methods to render the game state
+                screen.clear(Rgba(80, 80, 80, 255));
+            }
+            Mode::Options => {
+                screen.clear(Rgba(0, 0, 0, 255));
+            }
+            Mode::EndGame => { // Draw game result?
+                screen.clear(Rgba(255, 255, 80, 255));
+            }
+        }
+    }
+}
 impl Game {
     fn integrate(&mut self) {
     
@@ -68,6 +191,7 @@ impl Game {
 
 impl engine3d::Game for Game {
     type StaticData = GameData;
+    
     fn start(engine: &mut Engine) -> (Self, Self::StaticData) {
         use rand::Rng;
         let mut world = World::new();
@@ -325,5 +449,21 @@ fn main() {
     env_logger::init();
     let title = env!("CARGO_PKG_NAME");
     let window = winit::window::WindowBuilder::new().with_title(title);
+    
+    
+    let mut input = WinitInputHelper::new();
+    let mut mode = Mode::Title;
+    let camera_position = Vec2i(0,0);
+    let mut pixels = {
+        let window_size = window.inner_size();
+        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
+        Pixels::new(WIDTH as u32, HEIGHT as u32, surface_texture).unwrap()
+    };
+    let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
+            screen.clear(CLEAR_COL);
+            mode.display(&mut state, &mut data, &mut screen);
+    
+    
+
     run::<GameData, Game>(window, std::path::Path::new("content"));
 }
