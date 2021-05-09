@@ -511,3 +511,57 @@ impl Uniforms {
         self.proj = (OPENGL_TO_WGPU_MATRIX * proj).into();
     }
 }
+
+//Types
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+pub struct Rect {
+    pub x: i32,
+    pub y: i32,
+    pub w: u16,
+    pub h: u16,
+}
+
+impl Rect {
+    pub fn translate(&mut self, x: i32, y: i32) {
+        self.x += x;
+        self.y += y;
+    }
+}
+
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+pub struct Vec2i(pub i32,pub i32);
+
+#[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
+pub struct Rgba(pub u8, pub u8, pub u8, pub u8);
+
+
+//Screen
+pub struct Screen<'fb> {
+    framebuffer: &'fb mut [u8],
+    width: usize,
+    height: usize,
+    depth: usize,
+    position: Vec2i,
+}
+#[allow(dead_code)]
+impl<'fb> Screen<'fb> {
+    // Call =wrap= every frame; that means the camera position will need to be stored in the game state
+    pub fn wrap(framebuffer: &'fb mut [u8], width: usize, height: usize, depth: usize, position:Vec2i) -> Self {
+        Self {
+            framebuffer,
+            width,
+            height,
+            depth,
+            position
+        }
+    }
+
+
+    pub fn clear(&mut self, col: Rgba) {
+        let c = [col.0, col.1, col.2, col.3];
+        for px in self.framebuffer.chunks_exact_mut(4) {
+            px.copy_from_slice(&c);
+        }
+    }
+
+}

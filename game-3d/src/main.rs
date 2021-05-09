@@ -1,20 +1,23 @@
 use std::borrow::BorrowMut;
 
 use cgmath::{Quaternion, Rotation};
-use engine3d::{
-    assets::ModelRef, collision, events::*, geom::*, render::InstanceGroups, run, world::World,
+use engine3d::{//screen,
+    assets::ModelRef, collision, events::*, geom::*, render::*, //render::InstanceGroups, 
+    run, world::World,
     Engine, DT
 };
 use rand;
 use winit;
-
-use engine3d::src::screen;
+//use winit::window::WindowBuilder;
 
 use winit_input_helper::WinitInputHelper;
-use winit::event::{Event, VirtualKeyCode};
+//use winit::event::{Event, VirtualKeyCode};
 extern crate savefile;
+
 use savefile::prelude::*;
 //use pixels::{Pixels, SurfaceTexture};
+
+
 
 extern crate savefile_derive;
 
@@ -82,18 +85,19 @@ struct GameData {
     player_model: engine3d::assets::ModelRef,
 }
 
+//not fully implemented
 impl Mode {
     // update consumes self and yields a new state (which might also just be self)
-    fn update(self, input: &WinitInputHelper) -> Self {
+    fn update(self, input: &WinitInputHelper, engine: &mut Engine) -> Self {
         match self {
             Mode::Title => {
-                if input.key_pressed(VirtualKeyCode::P) {
+                if engine.events.key_held(KeyCode::P) {
                     Mode::Play(false)
                 }
-                else if input.key_pressed(VirtualKeyCode::O) {
+                else if engine.events.key_held(KeyCode::O) {
                     Mode::Options
                 } 
-                else if input.key_pressed(VirtualKeyCode::Q) {
+                else if engine.events.key_held(KeyCode::Q) {
                     panic!();
                 }
                 else {
@@ -102,19 +106,19 @@ impl Mode {
             }
             //actively playing
             Mode::Play(paused) => {
-                if !paused {
+                //if !paused {
                     //update game
-                }
-                else if input.key_pressed(VirtualKeyCode::Space) {
+                //}
+                if engine.events.key_held(KeyCode::Space) {
                     Mode::Play(!paused)
                 }
-                else if input.key_pressed(VirtualKeyCode::T) {
+                else if engine.events.key_held(KeyCode::T) {
                     Mode::Title
                 }
-                else if input.key_pressed(VirtualKeyCode::Q) {
+                else if engine.events.key_held(KeyCode::Q) {
                     panic!();
                 }
-                else if input.key_pressed(VirtualKeyCode::O) {
+                else if engine.events.key_held(KeyCode::O) {
                     Mode::Options
                 }
                 else {
@@ -122,13 +126,13 @@ impl Mode {
                 }
             }
             Mode::Options => {
-                if input.key_pressed(VirtualKeyCode::T) {
+                if engine.events.key_held(KeyCode::T) {
                     Mode::Title
                 }
-                else if input.key_pressed(VirtualKeyCode::P) {
+                else if engine.events.key_held(KeyCode::P) {
                     Mode::Play(false)
                 }
-                else if input.key_pressed(VirtualKeyCode::Q) {
+                else if engine.events.key_held(KeyCode::Q) {
                     panic!();
                 }
                 else {
@@ -137,19 +141,19 @@ impl Mode {
             }
             //on play screen while dead
             Mode::EndGame => {
-                if input.key_pressed(VirtualKeyCode::T) {
+                if engine.events.key_held(KeyCode::T) {
                     Mode::Title
                 }
-                else if input.key_pressed(VirtualKeyCode::P) {
+                else if engine.events.key_held(KeyCode::P) {
                     Mode::Play(false)
                 }
-                else if input.key_pressed(VirtualKeyCode::T) {
+                else if engine.events.key_held(KeyCode::T) {
                     Mode::Title
                 }
-                else if input.key_pressed(VirtualKeyCode::Q) {
+                else if engine.events.key_held(KeyCode::Q) {
                     panic!();
                 }
-                else if input.key_pressed(VirtualKeyCode::O) {
+                else if engine.events.key_held(KeyCode::O) {
                     Mode::Options
                 }
                 else {
@@ -158,6 +162,7 @@ impl Mode {
             }
         }
     }
+    //screen reference needs to be changed
     fn display(&self, screen: &mut Screen) {
         match self {
             Mode::Title => {
@@ -451,17 +456,15 @@ fn main() {
     let window = winit::window::WindowBuilder::new().with_title(title);
     
     
-    let mut input = WinitInputHelper::new();
+
     let mut mode = Mode::Title;
     let camera_position = Vec2i(0,0);
-    let mut pixels = {
-        let window_size = window.inner_size();
-        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH as u32, HEIGHT as u32, surface_texture).unwrap()
-    };
-    let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
-            screen.clear(CLEAR_COL);
-            mode.display(&mut state, &mut data, &mut screen);
+
+
+    //pixels.get_frame() needs to be replaced with framebuffer that works with render & its buffers
+    //let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
+    //screen.clear(CLEAR_COL);
+    mode.display(&mut state, &mut data, &mut screen); 
     
     
 

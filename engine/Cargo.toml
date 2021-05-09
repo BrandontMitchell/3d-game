@@ -5,6 +5,7 @@ authors = ["Maddy Dortignacq, Brandon Mitchell, Avalon Vinella"]
 edition = "2018"
 
 [dependencies]
+
 anyhow = "1.0"
 bytemuck = { version = "1.4", features = [ "derive" ] }
 cgmath = "0.18"
@@ -19,6 +20,7 @@ winit_input_helper = "0.6.0"
 savefile = "0.7.4"
 savefile-derive = "0.7.3"
 #pixels = "0.2.0"
+
 
 [dependencies.gltf]
 version="0.15.2"
