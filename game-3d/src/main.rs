@@ -1,10 +1,9 @@
 use std::borrow::BorrowMut;
 
 use cgmath::{Quaternion, Rotation};
-use engine3d::{//screen,
-    assets::ModelRef, collision, events::*, geom::*, render::*, //render::InstanceGroups, 
-    run, world::World,
-    Engine, DT
+use engine3d::{
+    assets::ModelRef, collision, events::*, geom::*, render::InstanceGroups, run, world::World,
+    Engine, DT, components::Component
 };
 use rand;
 use winit;
@@ -30,43 +29,73 @@ const WIDTH: usize = 800;
 const HEIGHT: usize = 500;
 
 // leaving all "sparse" as false for now
+// All components that are "sparse" are stored in hashmaps
+// The others are in a vec of options
 pub struct BodyPlane(Plane);
+impl Component for BodyPlane {
+    fn is_sparse(&self) -> bool {
+        false
+    }
+}
 pub struct BodySphere(Sphere);
-// impl ComponentType for Body {
-//     const sparse: bool = false;
-// }
+impl Component for BodySphere {
+    fn is_sparse(&self) -> bool {
+        true
+    }
+}
 pub struct Velocity(Vec3);
-// impl ComponentType for Velocity {
-//     const sparse: bool = false;
-// }
+impl Component for Velocity {
+    fn is_sparse(&self) -> bool {
+        true
+    }
+}
 pub struct Rot(Quaternion<f32>);
-
-// impl ComponentType for Rotation {
-//     const sparse: bool = false;
-// }
+impl Component for Rot {
+    fn is_sparse(&self) -> bool {
+        false
+    }
+}
 
 pub struct Acceleration(Vec3);
-// impl ComponentType for Acceleration {
-//     const sparse: bool = false;
-// }
+impl Component for Acceleration {
+    fn is_sparse(&self) -> bool {
+        true
+    }
+}
 
 pub struct Omega(Vec3);
-// impl ComponentType for Omega {
-//     const sparse: bool = false;
-// }
+impl Component for Omega {
+    fn is_sparse(&self) -> bool {
+        false
+    }
+}
 
 pub struct Control((i8, i8));
-// impl ComponentType for Control {
-//     const sparse: bool = false;
-// }
+impl Component for Control {
+    fn is_sparse(&self) -> bool {
+        false
+    }
+}
 
 pub struct Model(engine3d::assets::ModelRef);
-// impl ComponentType for Model {
-//     const sparse: bool = false;
-// }
+impl Component for Model {
+    fn is_sparse(&self) -> bool {
+        false
+    }
+}
 
-pub struct Linear_Momentum(Vec3);
+pub struct LinearMomentum(Vec3);
+impl Component for LinearMomentum {
+    fn is_sparse(&self) -> bool {
+        true
+    }
+}
 pub struct Mass(f32);
+impl Component for Mass {
+    fn is_sparse(&self) -> bool {
+        true
+    }
+}
 
 #[derive(Debug, Copy, Clone)]
 enum Mode {
@@ -214,22 +243,20 @@ impl engine3d::Game for Game {
 
         // player has body, vel, acc, omega, rot, momentum, and mass
         let player = world.add_entity();
+        let r = 0.3;
         world.add_component(
             player,
             BodySphere(Sphere {
                 c: Pos3::new(0.0, 3.0, 0.0),
-                r: 0.3,
+                r,
             }),
         );
         world.add_component(player, Velocity(Vec3::zero()));
         world.add_component(player, Acceleration(Vec3::zero()));
         world.add_component(player, Omega(Vec3::zero()));
         world.add_component(player, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
-        world.add_component(player, Linear_Momentum(Vec3::zero()));
-        let mut mass = 0.0;
-        if let Some(body) = &world.borrow_component_vec_mut::<BodySphere>().unwrap()[player] {
-            mass = (body.0.r * 4.0).powi(3);
-        }
+        world.add_component(player, LinearMomentum(Vec3::zero()));
+        let mass = (r * 4.0).powi(3);
         world.add_component(player, Mass(mass));
 
         // add models to wall and player
@@ -249,25 +276,23 @@ impl engine3d::Game for Game {
         // need shapes, their rotations, and their models
         let spheres = self
             .world
-            .borrow_component_vec_mut::<BodySphere>()
+            .borrow_components_sparse_mut::<BodySphere>()
             .unwrap();
-        let planes = self.world.borrow_component_vec_mut::<BodyPlane>().unwrap();
-        let models = self.world.borrow_component_vec_mut::<Model>().unwrap();
-        let rots = self.world.borrow_component_vec_mut::<Rot>().unwrap();
+        let planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
+        let models = self.world.borrow_components_mut::<Model>().unwrap();
+        let rots = self.world.borrow_components_mut::<Rot>().unwrap();
 
         // render spheres
-        for (id, body) in spheres.iter().enumerate() {
-            if let Some(body) = body {
-                if let Some(rot) = &rots[id] {
-                    let ir = engine3d::render::InstanceRaw {
-                        model: (Mat4::from_translation(body.0.c.to_vec())
-                            * Mat4::from_scale(body.0.r)
-                            * Mat4::from(rot.0))
-                        .into(),
-                    };
-                    if let Some(model) = &models[id] {
-                        igs.render(model.0, ir);
-                    }
+        for (id, body) in spheres.iter() {
+            if let Some(rot) = &rots[*id] {
+                let ir = engine3d::render::InstanceRaw {
+                    model: (Mat4::from_translation(body.0.c.to_vec())
+                        * Mat4::from_scale(body.0.r)
+                        * Mat4::from(rot.0))
+                    .into(),
+                };
+                if let Some(model) = &models[*id] {
+                    igs.render(model.0, ir);
                 }
             }
         }
@@ -292,9 +317,9 @@ impl engine3d::Game for Game {
     fn update(&mut self, engine: &mut Engine) {
         let mut accs = self
             .world
-            .borrow_component_vec_mut::<Acceleration>()
+            .borrow_components_sparse_mut::<Acceleration>()
             .unwrap();
-        let mut omegas = self.world.borrow_component_vec_mut::<Omega>().unwrap();
+        let mut omegas = self.world.borrow_components_mut::<Omega>().unwrap();
 
         // IF WE WANT PLAYER CONTROLS INSTEAD OF PLANE CONTROLS
         //
@@ -329,7 +354,7 @@ impl engine3d::Game for Game {
         // }
 
         // only one thing is controllable, so its fine for now
-        let mut controls = self.world.borrow_component_vec_mut::<Control>().unwrap();
+        let mut controls = self.world.borrow_components_mut::<Control>().unwrap();
         for c in controls.iter_mut() {
             if let Some(cont) = c {
                 cont.0 .0 = if engine.events.key_held(KeyCode::A) {
@@ -350,7 +375,7 @@ impl engine3d::Game for Game {
         }
 
         // integrate planes
-        let mut planes = self.world.borrow_component_vec_mut::<BodyPlane>().unwrap();
+        let mut planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
 
         for (id, body) in planes.iter_mut().enumerate() {
             if let Some(body) = body {
@@ -364,12 +389,12 @@ impl engine3d::Game for Game {
         // integrate spheres
         let mut spheres = self
             .world
-            .borrow_component_vec_mut::<BodySphere>()
+            .borrow_components_sparse_mut::<BodySphere>()
             .unwrap();
-        let mut vels = self.world.borrow_component_vec_mut::<Velocity>().unwrap();
-        let mut rots = self.world.borrow_component_vec_mut::<Rot>().unwrap();
-        let mut ps = self.world.borrow_component_vec_mut::<Linear_Momentum>().unwrap();
-        let mut masses = self.world.borrow_component_vec_mut::<Mass>().unwrap();
+        let mut vels = self.world.borrow_components_sparse_mut::<Velocity>().unwrap();
+        let mut rots = self.world.borrow_components_mut::<Rot>().unwrap();
+        let mut ps = self.world.borrow_components_sparse_mut::<LinearMomentum>().unwrap();
+        let mut masses = self.world.borrow_components_sparse_mut::<Mass>().unwrap();
 
         // collisions between player and floor
         self.pw.clear();
@@ -388,62 +413,39 @@ impl engine3d::Game for Game {
         let mut pm = vec![];
         let mut player_id = 0;
 
-        for (id, s) in spheres.iter().enumerate() {
-            if let Some(s) = s {
-                player_id = id;
-                pb.push(s.0);
-                if let Some(v) = &vels[id] {
-                    pv.push(v.0);
-                }
-                if let Some(p) = &ps[id] {
-                    pp.push(p.0);
-                }
-                if let Some(m) = &masses[id] {
-                    pm.push(m.0);
-                }
-            }
+        for (id, s) in spheres.iter() {
+            player_id = *id;
+            pb.push(s.0);
+            pv.push(vels[&id].0);
+            pp.push(ps[&id].0);
+            pm.push(masses[&id].0);
         }
 
         collision::gather_contacts_ab(&pb, &walls, &mut self.pw);
         collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
-        if let Some(body) = &mut spheres[player_id] {
-            body.0 = pb[0];
-        }
-        if let Some(p) = &mut ps[player_id] {
-            p.0 = pp[0];
-        }
+        spheres.get_mut(&player_id).unwrap().0 = pb[0];
+        ps.get_mut(&player_id).unwrap().0 = pp[0];
 
         for collision::Contact { a: pa, .. } in self.pw.iter() {
             // apply "friction" to players on the ground
             assert_eq!(*pa, 0);
-            if let Some(v) = &mut vels[player_id] {
-                v.0 *= 0.98;
-            }
+            vels.get_mut(&player_id).unwrap().0 *= 0.98;
         }
 
         // update spheres (apply gravity, momentum, etc)
-        // hopefully this can be less gross if i do the sparse thing
-        for (id, body) in spheres.iter_mut().enumerate() {
+        for (id, body) in spheres.iter_mut() {
             // control sphere (includes the player)
-            if let Some(body) = body {
-                if let Some(p) = &mut ps[id] {
-                    if let Some(v) = &mut vels[id] {
-                        if let Some(m) = &masses[id] {
-                            if let Some(r) = &mut rots[id] {
-                                if let Some(a) = &accs[id] {
-                                    if let Some(o) = &omegas[id] {
-                                        p.0 += ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
-                                        v.0 = p.0 / m.0;
-                                        if v.0.magnitude() > MAX_PLAYER_VELOCITY {
-                                            v.0 = v.0.normalize_to(MAX_PLAYER_VELOCITY);
-                                        }
-                                        body.0.c += v.0 * DT;
-                                        r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
-                                    }
-                                }
-                            }
-                        }
+            let m = &masses[&id];
+            let a = &accs[&id];
+            if let Some(r) = &mut rots[*id] {
+                if let Some(o) = &omegas[*id] {
+                    ps.get_mut(&id).unwrap().0 += ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
+                    vels.get_mut(&id).unwrap().0 = ps[&id].0 / m.0;
+                    if vels[&id].0.magnitude() > MAX_PLAYER_VELOCITY {
+                        vels.get_mut(&id).unwrap().0 = vels[&id].0.normalize_to(MAX_PLAYER_VELOCITY);
                     }
+                    body.0.c += vels[&id].0 * DT;
+                    r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
                 }
             }
         }
