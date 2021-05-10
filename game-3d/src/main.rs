@@ -120,6 +120,7 @@ impl Component for Mass {
         true
     }
 }
+
 /* #[macro_use]
 extern crate savefile;
 use savefile::prelude::*;
@@ -370,6 +371,7 @@ impl engine3d::Game for Game {
         world.add_component(wall, Model(wall_model));
         world.add_component(player, Model(player_model));
         world.add_component(end_sphere, Model(end_model));
+
 
         engine.set_ambient(0.05);
         let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
@@ -689,6 +691,7 @@ impl engine3d::Game for Game {
                     }
                 }
 
+                let spotlight = Light::spot(Pos3::new(10.0, 5.0, 0.0), Vec3::new(0.0,1.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
                 // lights
                 let light_pos = self.gamesave.light.position();
                 let light_pos = if engine.events.key_held(KeyCode::A) {
@@ -709,7 +712,7 @@ impl engine3d::Game for Game {
                     light_pos
                 };
                 self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
-                engine.set_lights(vec![self.gamesave.light]);
+                engine.set_lights(vec![spotlight]);
             }
         }
     }

@@ -17,8 +17,8 @@ uniform Uniforms {
 
 struct Light {
   vec4 pos;
+  vec4 dir;
   vec4 color;
-  // vec4 dir;
 };
 
 layout(set=2, binding=0)
@@ -41,16 +41,29 @@ void main() {
     float light_ambient = 0.1;
     // Point-light specific; change if directional lights, spotlights are used
     // to branch on e.g. position.w == 0 (directional) or direction.w == 0 (point) or else spot
-    vec3 light_color = lights[i].color.xyz;
-    vec3 light_position = lights[i].pos.xyz;
-    vec3 light_dir = normalize(light_position - v_position);
-    float diffuse_strength = max(dot(normal, light_dir), 0.0);
-    vec3 diffuse_color = light_color * diffuse_strength;
-    vec3 ambient_color = light_color * light_ambient;
-    vec3 half_dir = normalize(view_dir + light_dir);
-    float specular_strength = pow(max(dot(normal, half_dir), 0.0), 32);
-    vec3 specular_color = specular_strength * light_color;
-    result += (ambient_color + diffuse_color + specular_color) * object_color.xyz;
+    if(lights[i].dir.w == 0) {
+        vec3 light_color = lights[i].color.xyz;
+        vec3 light_position = lights[i].pos.xyz;
+        vec3 light_dir = normalize(light_position - v_position);
+        float diffuse_strength = max(dot(normal, light_dir), 0.0);
+        vec3 diffuse_color = light_color * diffuse_strength;
+        vec3 ambient_color = light_color * light_ambient;
+        vec3 half_dir = normalize(view_dir + light_dir);
+        float specular_strength = pow(max(dot(normal, half_dir), 0.0), 32);
+        vec3 specular_color = specular_strength * light_color;
+        result += (ambient_color + diffuse_color + specular_color) * object_color.xyz;
+    } else {
+        vec3 light_color = lights[i].color.xyz;
+        vec3 light_position = lights[i].pos.xyz;
+        vec3 light_dir = lights[i].dir.xyz;
+        float diffuse_strength = max(dot(normal, light_dir), 0.0);
+        vec3 diffuse_color = light_color * diffuse_strength;
+        vec3 ambient_color = light_color * light_ambient;
+        vec3 half_dir = normalize(view_dir + light_dir);
+        float specular_strength = pow(max(dot(normal, half_dir), 0.0), 32);
+        vec3 specular_color = specular_strength * light_color;
+        result += (ambient_color + diffuse_color + specular_color) * object_color.xyz;
+    }
   }
   if(object_color.a < 0.1) {
     discard;
