@@ -121,6 +121,7 @@ impl Component for Mass {
         true
     }
 }
+
 /* #[macro_use]
 extern crate savefile;
 use savefile::prelude::*;
@@ -268,13 +269,14 @@ impl engine3d::Game for Game {
         // add models to wall and player
         let wall_model = engine.load_model("floor.obj");
         let player_model = engine.load_model("sphere.obj");
-        let end_model = engine.load_model("sphere.obj");
+        let end_model = engine.load_model("sphere_white.obj");
         world.add_component(wall, Model(wall_model));
         world.add_component(player, Model(player_model));
         world.add_component(end_sphere, Model(end_model));
 
+
         engine.set_ambient(0.05);
-        let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
+        let light = Light::spot(Pos3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
 
         let game_save = GameSave {
             world: world,
@@ -676,7 +678,10 @@ impl engine3d::Game for Game {
                 }
 
                 // lights
-                let light_pos = self.gamesave.light.position();
+                let player_r = spheres.get_mut(&player_id).unwrap().0.r;
+                let player_pos = spheres.get_mut(&player_id).unwrap().0.c;
+                let light_pos = Pos3::new(player_pos.x, player_pos.y + player_r + 0.5, player_pos.z);
+                //let light_pos = self.gamesave.light.position();
                 let light_pos = if engine.events.key_held(KeyCode::A) {
                     Quat::from(cgmath::Euler::new(
                         cgmath::Deg(0.0),
@@ -695,6 +700,8 @@ impl engine3d::Game for Game {
                     light_pos
                 };
                 self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
+                //println!("{:?}", light_pos);
+                //self.gamesave.light = Light::spot(light_pos, Vec3::new(0.0,1.0, 0.0), self.gamesave.light.color());
                 engine.set_lights(vec![self.gamesave.light]);
             }
         }
