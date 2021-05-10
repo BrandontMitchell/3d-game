@@ -352,7 +352,49 @@ impl engine3d::Game for Game {
                 return true;
             }
             Mode::EndGame => {}
-            Mode::Options => {}
+            Mode::Options => {
+                let mut screen = Screen::wrap(
+                    pixels.0.get_frame(),
+                    pixels.1.width as usize,
+                    pixels.1.height as usize,
+                    DEPTH,
+                    Vec2i(0, 0),
+                );
+                screen.clear(Rgba(100, 70, 150, 0));
+                let w = pixels.1.width as i32;
+                let h = pixels.1.height as i32;
+                let menu_rect = Rect {
+                    x: w / 6,
+                    y: h / 6,
+                    w: (2 * w as u16) / 3,
+                    h: (2* h as u16) / 3,
+                };
+                screen.rect(menu_rect, Rgba(20, 0, 100, 255));
+                screen.empty_rect(menu_rect, 4, Rgba(200, 220, 255, 255));
+
+                // example of using text -- need to reset for new sizes
+                let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
+                layout.reset(&LayoutSettings {
+                    x: (w / 6) as f32,
+                    y: (h / 2) as f32,
+                    max_width: Some(((2 * w) / 3) as f32),
+                    horizontal_align: fontdue::layout::HorizontalAlign::Center,
+                    ..LayoutSettings::default()
+                });
+                layout.append(
+                    &self.fonts.font_list,
+                    &TextStyle::new("Press P to Play or Q to Quit", 45.0, 0),
+                );
+                screen.draw_text(
+                    &mut self.fonts.rasterized,
+                    &self.fonts.font_list[0],
+                    &mut layout,
+                    Rgba(255, 255, 255, 255),
+                );
+
+                pixels.0.render().unwrap();
+                return true;
+            }
             Mode::Play(live) => {
                 // need shapes, their rotations, and their models
                 let spheres = self
