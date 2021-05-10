@@ -1,6 +1,7 @@
 use std::borrow::BorrowMut;
 
 use cgmath::{Quaternion, Rotation};
+
 use engine3d::{
     assets::ModelRef,
     collision,
@@ -15,6 +16,7 @@ use engine3d::{
     Engine, DT,
 };
 use pixels::{Pixels, SurfaceTexture};
+
 use rand;
 use winit::{self, dpi::PhysicalSize};
 //use winit::window::WindowBuilder;
@@ -24,9 +26,11 @@ use winit_input_helper::WinitInputHelper;
 // extern crate savefile;
 
 // use savefile::prelude::*;
-// //use pixels::{Pixels, SurfaceTexture};
 
 // extern crate savefile_derive;
+=======
+//use serde::{Serialize, Deserialize};
+
 
 const G: f32 = 10.0;
 const MAX_PLAYER_VELOCITY: f32 = 20.0;
@@ -36,7 +40,6 @@ const DEPTH: usize = 4;
 const WIDTH: usize = 800;
 const HEIGHT: usize = 500;
 
-// leaving all "sparse" as false for now
 // All components that are "sparse" are stored in hashmaps
 // The others are in a vec of options
 pub struct BodyPlane(Plane);
@@ -104,6 +107,47 @@ impl Component for Mass {
         true
     }
 }
+/* #[macro_use]
+extern crate savefile;
+use savefile::prelude::*;
+#[macro_use]
+use savefile::{WithSchema, Serialize, Deserialize};
+
+#[macro_use]
+extern crate savefile_derive;
+
+
+#[derive(Copy, Serialize, Deserialize)] */
+//#[derive(Savefile)]
+//#[derive()]
+//#[derive(Clone, Copy, Savefile)]
+extern crate savefile;
+//use savefile::prelude::*;
+use savefile::{Serialize, Deserialize};
+
+//#[macro_use]
+extern crate savefile_derive;
+use savefile_derive::Savefile;
+
+//#[derive(Clone, Serialize, Deserialize)]
+//#[repr(C)]
+//#[derive(Serialize, Deserialize, Savefile)]
+struct Game {
+    world: World,
+    pw: Vec<collision::Contact<usize>>,
+    light: Light,
+    mode: Mode,
+}
+
+impl Game {
+    fn integrate(&mut self) {
+    
+    }
+}
+struct GameData {
+    wall_model: engine3d::assets::ModelRef,
+    player_model: engine3d::assets::ModelRef,
+}
 
 #[derive(Debug, Copy, Clone)]
 enum Mode {
@@ -111,17 +155,6 @@ enum Mode {
     Play(bool),
     Options,
     EndGame,
-}
-
-struct Game {
-    world: World,
-    pw: Vec<collision::Contact<usize>>,
-    light: Light,
-    mode: Mode,
-}
-struct GameData {
-    wall_model: engine3d::assets::ModelRef,
-    player_model: engine3d::assets::ModelRef,
 }
 
 //not fully implemented
@@ -512,6 +545,14 @@ impl engine3d::Game for Game {
     }
 }
 
+/* fn save_game(game:&Game) {
+    save_file("save_marble.bin", 0, game).unwrap();
+}
+
+fn load_game() -> Game {
+    load_file("save_marble.bin", 0).unwrap()
+}  */
+
 fn main() {
     env_logger::init();
     let title = env!("CARGO_PKG_NAME");
@@ -523,7 +564,9 @@ fn main() {
     //pixels.get_frame() needs to be replaced with framebuffer that works with render & its buffers
     //let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
     //screen.clear(CLEAR_COL);
-    //mode.display(&mut state, &mut data, &mut screen);
+
+    //mode.display(&mut screen); 
+
 
     run::<GameData, Game>(window, std::path::Path::new("content"));
 }
