@@ -1,4 +1,4 @@
-use crate::types::{Rect, Vec2i};
+use crate::render::{Rect, Vec2i};
 use fontdue::{Font, Metrics};
 use std::collections::HashMap;
 

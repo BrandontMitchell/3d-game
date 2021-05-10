@@ -272,8 +272,7 @@ impl<'fb> Screen<'fb> {
     //         return;
     //     }
     //     let depth = self.depth;
-    //     assert_eq!(depth, src.depth());
-    //     let src_pitch = src.pitch();
+    //     let src_pitch = tw * th;
     //     let dst_pitch = self.width * depth;
     //     // All this rigmarole is just to avoid bounds checks on each pixel of the blit.
     //     // We want to calculate which row/col of the src image to start at and which to end at.

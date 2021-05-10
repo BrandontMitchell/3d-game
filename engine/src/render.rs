@@ -305,7 +305,7 @@ impl Render {
 
     pub(crate) fn update_buffers<R, G: Game<StaticData = R>>(
         &mut self,
-        game: &G,
+        game: &mut G,
         rules: &R,
         assets: &mut Assets,
         pixels: &mut (Pixels, PhysicalSize<u32>),
@@ -336,7 +336,7 @@ impl Render {
 
     pub(crate) fn render<R, G: Game<StaticData = R>>(
         &mut self,
-        game: &G,
+        game: &mut G,
         rules: &R,
         assets: &mut Assets,
         pixels: &mut (Pixels, PhysicalSize<u32>),

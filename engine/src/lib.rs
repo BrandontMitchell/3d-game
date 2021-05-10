@@ -20,11 +20,12 @@ pub mod render;
 use render::{InstanceGroups, Render};
 pub mod assets;
 use assets::Assets;
+pub mod camera_control;
 pub mod components;
 pub mod lights;
 pub mod screen;
+pub mod text;
 pub mod world;
-pub mod camera_control;
 
 pub const DT: f32 = 1.0 / 60.0;
 
@@ -60,7 +61,11 @@ pub trait Game: Sized {
     type StaticData;
     fn start(engine: &mut Engine) -> (Self, Self::StaticData);
     fn update(&mut self, engine: &mut Engine);
-    fn render(&self, igs: &mut InstanceGroups, pixels: &mut (Pixels, PhysicalSize<u32>)) -> bool;
+    fn render(
+        &mut self,
+        igs: &mut InstanceGroups,
+        pixels: &mut (Pixels, PhysicalSize<u32>),
+    ) -> bool;
 }
 
 pub fn run<R, G: Game<StaticData = R>>(
