@@ -1,5 +1,7 @@
+use pixels::{Pixels, SurfaceTexture};
 use std::path::Path;
 use winit::{
+    dpi::PhysicalSize,
     event::*,
     event_loop::{ControlFlow, EventLoop},
     platform::run_return::EventLoopExtRunReturn,
@@ -18,6 +20,7 @@ pub mod assets;
 use assets::Assets;
 pub mod components;
 pub mod lights;
+pub mod screen;
 pub mod world;
 
 pub const DT: f32 = 1.0 / 60.0;
@@ -27,6 +30,7 @@ pub struct Engine {
     pub assets: Assets,
     render: Render,
     pub events: Events,
+    pub pixels: (Pixels, PhysicalSize<u32>),
 }
 
 impl Engine {
@@ -53,7 +57,7 @@ pub trait Game: Sized {
     type StaticData;
     fn start(engine: &mut Engine) -> (Self, Self::StaticData);
     fn update(&mut self, engine: &mut Engine);
-    fn render(&self, igs: &mut InstanceGroups);
+    fn render(&self, igs: &mut InstanceGroups, pixels: &mut (Pixels, PhysicalSize<u32>)) -> bool;
 }
 
 pub fn run<R, G: Game<StaticData = R>>(
@@ -67,11 +71,28 @@ pub fn run<R, G: Game<StaticData = R>>(
     use futures::executor::block_on;
     let render = block_on(Render::new(&window));
     let events = Events::default();
+
+    let window_size = window.inner_size();
+    let mut pixels = (
+        {
+            let surface_texture =
+                SurfaceTexture::new(window_size.width, window_size.height, &window);
+            Pixels::new(
+                window_size.width as u32,
+                window_size.height as u32,
+                surface_texture,
+            )
+            .unwrap()
+        },
+        window_size,
+    );
+
     let mut engine = Engine {
         assets,
         render,
         events,
         frame: 0,
+        pixels,
     };
     let (mut game, rules) = G::start(&mut engine);
     // How many unsimulated frames have we saved up?
@@ -110,7 +131,12 @@ pub fn run<R, G: Game<StaticData = R>>(
                 }
             }
             Event::RedrawRequested(_) => {
-                match engine.render.render(&mut game, &rules, &mut engine.assets) {
+                match engine.render.render(
+                    &mut game,
+                    &rules,
+                    &mut engine.assets,
+                    &mut engine.pixels,
+                ) {
                     Ok(_) => {}
                     // Recreate the swap_chain if lost
                     Err(wgpu::SwapChainError::Lost) => engine.render.resize(engine.render.size),
