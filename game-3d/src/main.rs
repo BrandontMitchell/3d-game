@@ -1,9 +1,10 @@
-use std::borrow::BorrowMut;
+use std::{borrow::BorrowMut, fs::read, path::Path};
 
 use cgmath::{Quaternion, Rotation};
 
 use engine3d::{
     assets::ModelRef,
+    camera_control::CameraController,
     collision,
     components::Component,
     events::*,
@@ -12,9 +13,13 @@ use engine3d::{
     render::{InstanceGroups, Rect, Rgba, Vec2i},
     run,
     screen::Screen,
+    text::Fonts,
     world::World,
     Engine, DT,
-    camera_control::CameraController
+};
+use fontdue::{
+    layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle},
+    Font,
 };
 use pixels::{Pixels, SurfaceTexture};
 
@@ -31,7 +36,6 @@ use winit_input_helper::WinitInputHelper;
 // extern crate savefile_derive;
 
 //use serde::{Serialize, Deserialize};
-
 
 const G: f32 = 10.0;
 const MAX_PLAYER_VELOCITY: f32 = 20.0;
@@ -150,12 +154,11 @@ struct Game {
     pw: Vec<collision::Contact<usize>>,
     mode: Mode,
     camera_controller: CameraController,
+    fonts: Fonts,
 }
 
 impl Game {
-    fn integrate(&mut self) {
-    
-    }
+    fn integrate(&mut self) {}
 }
 struct GameData {
     wall_model: engine3d::assets::ModelRef,
@@ -281,7 +284,7 @@ impl engine3d::Game for Game {
     fn start(engine: &mut Engine) -> (Self, Self::StaticData) {
         let mut world = World::new();
 
-        // wall has body and control
+        // floor has body and control
         let wall = world.add_entity();
         world.add_component(
             wall,
@@ -336,10 +339,16 @@ impl engine3d::Game for Game {
         engine.set_ambient(0.05);
         let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
 
-        let game_save = GameSave{world: world, light: light};
+        let game_save = GameSave {
+            world: world,
+            light: light,
+        };
         let camera_controller = CameraController::new(0.2);
+
+        let font: &[u8] = &read(Path::new("content/corbel.ttf")).unwrap();
+        let fonts = [Font::from_bytes(font, fontdue::FontSettings::default()).unwrap()];
         (
-/*             Self {
+            /*             Self {
                 world,
                 pw: vec![],
                 light,
@@ -349,7 +358,8 @@ impl engine3d::Game for Game {
                 gamesave: game_save,
                 pw: vec![],
                 mode: Mode::Title,
-                camera_controller
+                camera_controller,
+                fonts: Fonts::new(fonts),
             },
             GameData {
                 wall_model,
@@ -360,7 +370,11 @@ impl engine3d::Game for Game {
     }
 
     // Returns true if rendering in 2d, false otherwise
-    fn render(&self, igs: &mut InstanceGroups, pixels: &mut (Pixels, PhysicalSize<u32>)) -> bool {
+    fn render(
+        &mut self,
+        igs: &mut InstanceGroups,
+        pixels: &mut (Pixels, PhysicalSize<u32>),
+    ) -> bool {
         match self.mode {
             Mode::Title => {
                 let mut screen = Screen::wrap(
@@ -383,17 +397,52 @@ impl engine3d::Game for Game {
 
                 screen.rect(menu_rect, Rgba(20, 0, 100, 255));
                 screen.empty_rect(menu_rect, 4, Rgba(200, 220, 255, 255));
+
+                // example of using text -- need to reset for new sizes
+                let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
+                layout.reset(&LayoutSettings {
+                    x: (WIDTH / 6) as f32,
+                    y: (HEIGHT / 6) as f32,
+                    max_width: Some(((2 * w) / 3) as f32),
+                    horizontal_align: fontdue::layout::HorizontalAlign::Center,
+                    ..LayoutSettings::default()
+                });
+                layout.append(
+                    &self.fonts.font_list,
+                    &TextStyle::new("hello", 45.0, 0),
+                );
+                screen.draw_text(
+                    &mut self.fonts.rasterized,
+                    &self.fonts.font_list[0],
+                    &mut layout,
+                    Rgba(255, 255, 255, 255),
+                );
+
                 pixels.0.render().unwrap();
                 return true;
             }
             Mode::Play(true) => {
                 // need shapes, their rotations, and their models
-                let spheres = self.gamesave.world
+                let spheres = self
+                    .gamesave
+                    .world
                     .borrow_components_sparse_mut::<BodySphere>()
                     .unwrap();
-                let end_objects = self.gamesave.world.borrow_components_sparse_mut::<EndSphere>().unwrap();
-                let planes = self.gamesave.world.borrow_components_mut::<BodyPlane>().unwrap();
-                let models = self.gamesave.world.borrow_components_mut::<Model>().unwrap();
+                let end_objects = self
+                    .gamesave
+                    .world
+                    .borrow_components_sparse_mut::<EndSphere>()
+                    .unwrap();
+                let planes = self
+                    .gamesave
+                    .world
+                    .borrow_components_mut::<BodyPlane>()
+                    .unwrap();
+                let models = self
+                    .gamesave
+                    .world
+                    .borrow_components_mut::<Model>()
+                    .unwrap();
                 let rots = self.gamesave.world.borrow_components_mut::<Rot>().unwrap();
 
                 // render spheres
@@ -425,7 +474,6 @@ impl engine3d::Game for Game {
                         }
                     }
                 }
-
 
                 // render planes
                 for (id, body) in planes.iter().enumerate() {
@@ -460,13 +508,23 @@ impl engine3d::Game for Game {
             }
             Mode::Play(true) => {
                 self.camera_controller.update(engine);
-                let mut accs = self.gamesave.world
+                let mut accs = self
+                    .gamesave
+                    .world
                     .borrow_components_sparse_mut::<Acceleration>()
                     .unwrap();
-                let mut omegas = self.gamesave.world.borrow_components_mut::<Omega>().unwrap();
+                let mut omegas = self
+                    .gamesave
+                    .world
+                    .borrow_components_mut::<Omega>()
+                    .unwrap();
 
                 // only one thing is controllable, so its fine for now
-                let mut controls = self.gamesave.world.borrow_components_mut::<Control>().unwrap();
+                let mut controls = self
+                    .gamesave
+                    .world
+                    .borrow_components_mut::<Control>()
+                    .unwrap();
                 for c in controls.iter_mut() {
                     if let Some(cont) = c {
                         cont.0 .0 = if engine.events.key_held(KeyCode::A) {
@@ -487,7 +545,11 @@ impl engine3d::Game for Game {
                 }
 
                 // integrate planes
-                let mut planes = self.gamesave.world.borrow_components_mut::<BodyPlane>().unwrap();
+                let mut planes = self
+                    .gamesave
+                    .world
+                    .borrow_components_mut::<BodyPlane>()
+                    .unwrap();
 
                 for (id, body) in planes.iter_mut().enumerate() {
                     if let Some(body) = body {
@@ -503,20 +565,27 @@ impl engine3d::Game for Game {
                 }
 
                 // integrate spheres
-                let mut spheres = self.gamesave
+                let mut spheres = self
+                    .gamesave
                     .world
                     .borrow_components_sparse_mut::<BodySphere>()
                     .unwrap();
-                let mut vels = self.gamesave
+                let mut vels = self
+                    .gamesave
                     .world
                     .borrow_components_sparse_mut::<Velocity>()
                     .unwrap();
                 let mut rots = self.gamesave.world.borrow_components_mut::<Rot>().unwrap();
-                let mut ps = self.gamesave
+                let mut ps = self
+                    .gamesave
                     .world
                     .borrow_components_sparse_mut::<LinearMomentum>()
                     .unwrap();
-                let mut masses = self.gamesave.world.borrow_components_sparse_mut::<Mass>().unwrap();
+                let mut masses = self
+                    .gamesave
+                    .world
+                    .borrow_components_sparse_mut::<Mass>()
+                    .unwrap();
 
                 // collisions between player and floor
                 self.pw.clear();
@@ -548,12 +617,6 @@ impl engine3d::Game for Game {
                 spheres.get_mut(&player_id).unwrap().0 = pb[0];
                 ps.get_mut(&player_id).unwrap().0 = pp[0];
 
-                for collision::Contact { a: pa, .. } in self.pw.iter() {
-                    // apply "friction" to players on the ground
-                    assert_eq!(*pa, 0);
-                    vels.get_mut(&player_id).unwrap().0 *= 0.98;
-                }
-
                 // update spheres (apply gravity, momentum, etc)
                 for (id, body) in spheres.iter_mut() {
                     // control sphere (includes the player)
@@ -564,6 +627,7 @@ impl engine3d::Game for Game {
                             ps.get_mut(&id).unwrap().0 +=
                                 ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
                             vels.get_mut(&id).unwrap().0 = ps[&id].0 / m.0;
+                            vels.get_mut(&id).unwrap().0 *= 0.98; // friction
                             if vels[&id].0.magnitude() > MAX_PLAYER_VELOCITY {
                                 vels.get_mut(&id).unwrap().0 =
                                     vels[&id].0.normalize_to(MAX_PLAYER_VELOCITY);
@@ -623,8 +687,7 @@ fn main() {
     //let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
     //screen.clear(CLEAR_COL);
 
-    //mode.display(&mut screen); 
-
+    //mode.display(&mut screen);
 
     run::<GameData, Game>(window, std::path::Path::new("content"));
 }

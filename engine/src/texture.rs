@@ -2,10 +2,13 @@ use anyhow::*;
 use image::GenericImageView;
 use std::path::Path;
 
+use crate::render::Rect;
+
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
+    pub size: (usize, usize),
 }
 
 impl Texture {
@@ -62,6 +65,7 @@ impl Texture {
             texture,
             view,
             sampler,
+            size: (sc_desc.width as usize, sc_desc.height as usize),
         }
     }
 
@@ -130,6 +134,18 @@ impl Texture {
             texture,
             view,
             sampler,
+            size: (dimensions.0 as usize, dimensions.1 as usize),
         })
+    }
+
+    pub fn size(&self) -> (usize, usize) {
+        self.size
+    }
+
+    pub fn valid_frame(&self, frame: Rect) -> bool {
+        0 <= frame.x
+            && (frame.x + frame.w as i32) <= (self.size.0 as i32)
+            && 0 <= frame.y
+            && (frame.y + frame.h as i32) <= (self.size.1 as i32)
     }
 }
