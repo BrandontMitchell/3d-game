@@ -374,7 +374,7 @@ impl engine3d::Game for Game {
 
 
         engine.set_ambient(0.05);
-        let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
+        let light = Light::spot(Pos3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
 
         let game_save = GameSave {
             world: world,
@@ -691,7 +691,6 @@ impl engine3d::Game for Game {
                     }
                 }
 
-                let spotlight = Light::spot(Pos3::new(10.0, 5.0, 0.0), Vec3::new(0.0,1.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
                 // lights
                 let light_pos = self.gamesave.light.position();
                 let light_pos = if engine.events.key_held(KeyCode::A) {
@@ -712,7 +711,9 @@ impl engine3d::Game for Game {
                     light_pos
                 };
                 self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
-                engine.set_lights(vec![spotlight]);
+                //println!("{:?}", light_pos);
+                //self.gamesave.light = Light::spot(light_pos, Vec3::new(0.0,1.0, 0.0), self.gamesave.light.color());
+                engine.set_lights(vec![self.gamesave.light]);
             }
         }
     }

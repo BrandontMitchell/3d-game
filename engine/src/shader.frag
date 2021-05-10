@@ -35,7 +35,7 @@ void main() {
   vec3 normal = normalize(v_normal);
   vec4 object_color = texture(sampler2D(t_diffuse, s_diffuse), v_tex_coords);
   vec3 view_dir = normalize(u_view_position - v_position);
-
+  float bug = 0.0;
   vec3 result = ambient*object_color.xyz;
   for (int i = 0; i < 10; i++) {
     float light_ambient = 0.1;
@@ -57,6 +57,7 @@ void main() {
         vec3 light_position = lights[i].pos.xyz;
         vec3 light_dir = lights[i].dir.xyz;
         float diffuse_strength = max(dot(normal, light_dir), 0.0);
+        //float diffuse_strength = 0.05;
         vec3 diffuse_color = light_color * diffuse_strength;
         vec3 ambient_color = light_color * light_ambient;
         vec3 half_dir = normalize(view_dir + light_dir);
