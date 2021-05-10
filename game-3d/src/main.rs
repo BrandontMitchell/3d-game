@@ -54,6 +54,14 @@ impl Component for BodySphere {
         true
     }
 }
+
+pub struct EndSphere(Sphere);
+impl Component for EndSphere {
+    fn is_sparse(&self) -> bool {
+        true
+    }
+}
+
 pub struct Velocity(Vec3);
 impl Component for Velocity {
     fn is_sparse(&self) -> bool {
@@ -147,6 +155,7 @@ impl Game {
 struct GameData {
     wall_model: engine3d::assets::ModelRef,
     player_model: engine3d::assets::ModelRef,
+    end_model: engine3d::assets::ModelRef,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -288,6 +297,21 @@ impl engine3d::Game for Game {
                 r,
             }),
         );
+
+        let end_sphere = world.add_entity();
+        let r = 0.8;
+        world.add_component(
+            end_sphere,
+            EndSphere(Sphere {
+                c: Pos3::new(3.0, 1.0, 8.0), // todo make random and match plane height
+                r,
+            }),
+        );
+        world.add_component(end_sphere, Velocity(Vec3::zero()));
+        world.add_component(end_sphere, Acceleration(Vec3::zero()));
+        world.add_component(end_sphere, Omega(Vec3::zero()));
+        world.add_component(end_sphere, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
+        world.add_component(end_sphere, LinearMomentum(Vec3::zero()));
         world.add_component(player, Velocity(Vec3::zero()));
         world.add_component(player, Acceleration(Vec3::zero()));
         world.add_component(player, Omega(Vec3::zero()));
@@ -299,8 +323,10 @@ impl engine3d::Game for Game {
         // add models to wall and player
         let wall_model = engine.load_model("floor.obj");
         let player_model = engine.load_model("sphere.obj");
+        let end_model = engine.load_model("sphere.obj");
         world.add_component(wall, Model(wall_model));
         world.add_component(player, Model(player_model));
+        world.add_component(end_sphere, Model(end_model));
 
         engine.set_ambient(0.05);
         let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
@@ -314,6 +340,7 @@ impl engine3d::Game for Game {
             GameData {
                 wall_model,
                 player_model,
+                end_model,
             },
         )
     }
@@ -351,6 +378,7 @@ impl engine3d::Game for Game {
                     .world
                     .borrow_components_sparse_mut::<BodySphere>()
                     .unwrap();
+                let end_objects = self.world.borrow_components_sparse_mut::<EndSphere>().unwrap();
                 let planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
                 let models = self.world.borrow_components_mut::<Model>().unwrap();
                 let rots = self.world.borrow_components_mut::<Rot>().unwrap();
@@ -369,6 +397,23 @@ impl engine3d::Game for Game {
                         }
                     }
                 }
+
+                // end spheres
+                for (id, body) in end_objects.iter() {
+                    if let Some(rot) = &rots[*id] {
+                        let ir = engine3d::render::InstanceRaw {
+                            model: (Mat4::from_translation(body.0.c.to_vec())
+                                * Mat4::from_scale(body.0.r)
+                                * Mat4::from(rot.0))
+                            .into(),
+                        };
+                        if let Some(model) = &models[*id] {
+                            igs.render(model.0, ir);
+                        }
+                    }
+                }
+
+
                 // render planes
                 for (id, body) in planes.iter().enumerate() {
                     if let Some(body) = body {
