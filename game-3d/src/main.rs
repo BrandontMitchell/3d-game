@@ -1,21 +1,18 @@
 use std::borrow::BorrowMut;
 
 use cgmath::{Quaternion, Rotation};
-use engine3d::{DT, Engine, assets::ModelRef, collision, components::Component, events::*, geom::*, lights::Light, render::InstanceGroups, run, world::World};
+use engine3d::{DT, Engine, assets::ModelRef, collision, components::Component, events::*, geom::*, lights::Light, render::*, run, world::World};
 use rand;
 use winit;
 //use winit::window::WindowBuilder;
 
 use winit_input_helper::WinitInputHelper;
 //use winit::event::{Event, VirtualKeyCode};
-extern crate savefile;
-
-use savefile::prelude::*;
+//use serde::{Serialize, Deserialize};
 //use pixels::{Pixels, SurfaceTexture};
 
 
 
-extern crate savefile_derive;
 
 const G: f32 = 10.0;
 const MAX_PLAYER_VELOCITY: f32 = 20.0;
@@ -93,6 +90,46 @@ impl Component for Mass {
         true
     }
 }
+/* #[macro_use]
+extern crate savefile;
+use savefile::prelude::*;
+#[macro_use]
+use savefile::{WithSchema, Serialize, Deserialize};
+
+#[macro_use]
+extern crate savefile_derive;
+
+
+#[derive(Copy, Serialize, Deserialize)] */
+//#[derive(Savefile)]
+//#[derive()]
+//#[derive(Clone, Copy, Savefile)]
+extern crate savefile;
+//use savefile::prelude::*;
+use savefile::{Serialize, Deserialize};
+
+//#[macro_use]
+extern crate savefile_derive;
+use savefile_derive::Savefile;
+
+//#[derive(Clone, Serialize, Deserialize)]
+//#[repr(C)]
+//#[derive(Serialize, Deserialize, Savefile)]
+struct Game {
+    world: World,
+    pw: Vec<collision::Contact<usize>>,
+    light: Light,
+}
+
+impl Game {
+    fn integrate(&mut self) {
+    
+    }
+}
+struct GameData {
+    wall_model: engine3d::assets::ModelRef,
+    player_model: engine3d::assets::ModelRef,
+}
 
 #[derive(Debug, Copy, Clone)]
 enum Mode {
@@ -100,16 +137,6 @@ enum Mode {
     Play(bool),
     Options,
     EndGame,
-}
-
-struct Game {
-    world: World,
-    pw: Vec<collision::Contact<usize>>,
-    light: Light,
-}
-struct GameData {
-    wall_model: engine3d::assets::ModelRef,
-    player_model: engine3d::assets::ModelRef,
 }
 
 //not fully implemented
@@ -215,11 +242,7 @@ impl Mode {
         }
     }
 }
-impl Game {
-    fn integrate(&mut self) {
-    
-    }
-}
+
 
 impl engine3d::Game for Game {
     type StaticData = GameData;
@@ -415,6 +438,7 @@ impl engine3d::Game for Game {
 
         for (id, s) in spheres.iter() {
             player_id = *id;
+            //player bodies
             pb.push(s.0);
             pv.push(vels[&id].0);
             pp.push(ps[&id].0);
@@ -474,6 +498,14 @@ impl engine3d::Game for Game {
     }
 }
 
+/* fn save_game(game:&Game) {
+    save_file("save_marble.bin", 0, game).unwrap();
+}
+
+fn load_game() -> Game {
+    load_file("save_marble.bin", 0).unwrap()
+}  */
+
 fn main() {
     env_logger::init();
     let title = env!("CARGO_PKG_NAME");
@@ -488,7 +520,7 @@ fn main() {
     //pixels.get_frame() needs to be replaced with framebuffer that works with render & its buffers
     //let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
     //screen.clear(CLEAR_COL);
-    mode.display(&mut state, &mut data, &mut screen); 
+    //mode.display(&mut screen); 
     
     
 
