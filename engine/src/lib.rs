@@ -19,6 +19,7 @@ use assets::Assets;
 pub mod components;
 pub mod lights;
 pub mod world;
+pub mod screen;
 
 pub const DT: f32 = 1.0 / 60.0;
 
