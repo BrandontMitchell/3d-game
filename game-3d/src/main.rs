@@ -692,7 +692,10 @@ impl engine3d::Game for Game {
                 }
 
                 // lights
-                let light_pos = self.gamesave.light.position();
+                let player_r = spheres.get_mut(&player_id).unwrap().0.r;
+                let player_pos = spheres.get_mut(&player_id).unwrap().0.c;
+                let light_pos = Pos3::new(player_pos.x, player_pos.y + player_r + 0.5, player_pos.z);
+                //let light_pos = self.gamesave.light.position();
                 let light_pos = if engine.events.key_held(KeyCode::A) {
                     Quat::from(cgmath::Euler::new(
                         cgmath::Deg(0.0),
