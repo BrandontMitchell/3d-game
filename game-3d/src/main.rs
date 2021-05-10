@@ -367,7 +367,7 @@ impl engine3d::Game for Game {
         // add models to wall and player
         let wall_model = engine.load_model("floor.obj");
         let player_model = engine.load_model("sphere.obj");
-        let end_model = engine.load_model("sphere.obj");
+        let end_model = engine.load_model("sphere_white.obj");
         world.add_component(wall, Model(wall_model));
         world.add_component(player, Model(player_model));
         world.add_component(end_sphere, Model(end_model));
