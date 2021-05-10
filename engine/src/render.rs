@@ -4,10 +4,11 @@ use crate::model::*;
 use crate::texture;
 use crate::Game;
 use cgmath::SquareMatrix;
+use pixels::Pixels;
 use std::collections::BTreeMap;
 use wgpu::util::DeviceExt;
 
-use winit::window::Window;
+use winit::{dpi::PhysicalSize, window::Window};
 pub(crate) struct Render {
     surface: wgpu::Surface,
     pub(crate) device: wgpu::Device,
@@ -307,7 +308,8 @@ impl Render {
         game: &G,
         rules: &R,
         assets: &mut Assets,
-    ) {
+        pixels: &mut (Pixels, PhysicalSize<u32>),
+    ) -> bool {
         self.uniforms.update_view_proj(&self.camera);
         self.queue.write_buffer(
             &self.uniform_buffer,
@@ -315,9 +317,11 @@ impl Render {
             bytemuck::cast_slice(&[self.uniforms]),
         );
         self.instance_groups.clear();
-        game.render(&mut self.instance_groups);
+        let two_d = game.render(&mut self.instance_groups, pixels);
         self.instance_groups
             .update_buffers(&self.queue, &self.device, assets);
+
+        two_d
     }
 
     pub(crate) fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
@@ -335,57 +339,64 @@ impl Render {
         game: &G,
         rules: &R,
         assets: &mut Assets,
+        pixels: &mut (Pixels, PhysicalSize<u32>),
     ) -> Result<(), wgpu::SwapChainError> {
-        self.update_buffers(game, rules, assets);
+        let two_d = self.update_buffers(game, rules, assets, pixels);
 
-        let frame = self.swap_chain.get_current_frame()?.output;
+        match two_d {
+            false => {
+                let frame = self.swap_chain.get_current_frame()?.output;
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("Render Encoder"),
-            });
+                let mut encoder =
+                    self.device
+                        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                            label: Some("Render Encoder"),
+                        });
 
-        {
-            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Render Pass"),
-                color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
-                    attachment: &frame.view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        store: true,
-                    },
-                }],
-                depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachmentDescriptor {
-                    attachment: &self.depth_texture.view,
-                    depth_ops: Some(wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(1.0),
-                        store: true,
-                    }),
-                    stencil_ops: None,
-                }),
-            });
+                {
+                    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("Render Pass"),
+                        color_attachments: &[wgpu::RenderPassColorAttachmentDescriptor {
+                            attachment: &frame.view,
+                            resolve_target: None,
+                            ops: wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(wgpu::Color {
+                                    r: 0.1,
+                                    g: 0.2,
+                                    b: 0.3,
+                                    a: 1.0,
+                                }),
+                                store: true,
+                            },
+                        }],
+                        depth_stencil_attachment: Some(
+                            wgpu::RenderPassDepthStencilAttachmentDescriptor {
+                                attachment: &self.depth_texture.view,
+                                depth_ops: Some(wgpu::Operations {
+                                    load: wgpu::LoadOp::Clear(1.0),
+                                    store: true,
+                                }),
+                                stencil_ops: None,
+                            },
+                        ),
+                    });
 
-            render_pass.set_pipeline(&self.render_pipeline);
-            for (mr, (irs, buf, _cap)) in self.instance_groups.groups.iter() {
-                render_pass.set_vertex_buffer(1, buf.as_ref().unwrap().slice(..));
-                render_pass.draw_model_instanced(
-                    assets.get_model(*mr).unwrap(),
-                    0..irs.len() as u32,
-                    &self.uniform_bind_group,
-                    &self.light_bind_group,
-                );
+                    render_pass.set_pipeline(&self.render_pipeline);
+                    for (mr, (irs, buf, _cap)) in self.instance_groups.groups.iter() {
+                        render_pass.set_vertex_buffer(1, buf.as_ref().unwrap().slice(..));
+                        render_pass.draw_model_instanced(
+                            assets.get_model(*mr).unwrap(),
+                            0..irs.len() as u32,
+                            &self.uniform_bind_group,
+                            &self.light_bind_group,
+                        );
+                    }
+                }
+
+                self.queue.submit(std::iter::once(encoder.finish()));
             }
+            true => {}
         }
-
-        self.queue.submit(std::iter::once(encoder.finish()));
-
         Ok(())
     }
 }
@@ -529,39 +540,7 @@ impl Rect {
 }
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
-pub struct Vec2i(pub i32,pub i32);
+pub struct Vec2i(pub i32, pub i32);
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub struct Rgba(pub u8, pub u8, pub u8, pub u8);
-
-
-//Screen
-pub struct Screen<'fb> {
-    framebuffer: &'fb mut [u8],
-    width: usize,
-    height: usize,
-    depth: usize,
-    position: Vec2i,
-}
-#[allow(dead_code)]
-impl<'fb> Screen<'fb> {
-    // Call =wrap= every frame; that means the camera position will need to be stored in the game state
-    pub fn wrap(framebuffer: &'fb mut [u8], width: usize, height: usize, depth: usize, position:Vec2i) -> Self {
-        Self {
-            framebuffer,
-            width,
-            height,
-            depth,
-            position
-        }
-    }
-
-
-    pub fn clear(&mut self, col: Rgba) {
-        let c = [col.0, col.1, col.2, col.3];
-        for px in self.framebuffer.chunks_exact_mut(4) {
-            px.copy_from_slice(&c);
-        }
-    }
-
-}

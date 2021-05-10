@@ -1,21 +1,32 @@
 use std::borrow::BorrowMut;
 
 use cgmath::{Quaternion, Rotation};
-use engine3d::{DT, Engine, assets::ModelRef, collision, components::Component, events::*, geom::*, lights::Light, render::InstanceGroups, run, world::World};
+use engine3d::{
+    assets::ModelRef,
+    collision,
+    components::Component,
+    events::*,
+    geom::*,
+    lights::Light,
+    render::{InstanceGroups, Rect, Rgba, Vec2i},
+    run,
+    screen::Screen,
+    world::World,
+    Engine, DT,
+};
+use pixels::{Pixels, SurfaceTexture};
 use rand;
-use winit;
+use winit::{self, dpi::PhysicalSize};
 //use winit::window::WindowBuilder;
 
 use winit_input_helper::WinitInputHelper;
 //use winit::event::{Event, VirtualKeyCode};
-extern crate savefile;
+// extern crate savefile;
 
-use savefile::prelude::*;
-//use pixels::{Pixels, SurfaceTexture};
+// use savefile::prelude::*;
+// //use pixels::{Pixels, SurfaceTexture};
 
-
-
-extern crate savefile_derive;
+// extern crate savefile_derive;
 
 const G: f32 = 10.0;
 const MAX_PLAYER_VELOCITY: f32 = 20.0;
@@ -106,6 +117,7 @@ struct Game {
     world: World,
     pw: Vec<collision::Contact<usize>>,
     light: Light,
+    mode: Mode,
 }
 struct GameData {
     wall_model: engine3d::assets::ModelRef,
@@ -115,115 +127,110 @@ struct GameData {
 //not fully implemented
 impl Mode {
     // update consumes self and yields a new state (which might also just be self)
-    fn update(self, input: &WinitInputHelper, engine: &mut Engine) -> Self {
-        match self {
-            Mode::Title => {
-                if engine.events.key_held(KeyCode::P) {
-                    Mode::Play(false)
-                }
-                else if engine.events.key_held(KeyCode::O) {
-                    Mode::Options
-                } 
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else {
-                    self
-                }
-            }
-            //actively playing
-            Mode::Play(paused) => {
-                //if !paused {
-                    //update game
-                //}
-                if engine.events.key_held(KeyCode::Space) {
-                    Mode::Play(!paused)
-                }
-                else if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else if engine.events.key_held(KeyCode::O) {
-                    Mode::Options
-                }
-                else {
-                    self
-                }
-            }
-            Mode::Options => {
-                if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::P) {
-                    Mode::Play(false)
-                }
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else {
-                    self
-                }
-            }
-            //on play screen while dead
-            Mode::EndGame => {
-                if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::P) {
-                    Mode::Play(false)
-                }
-                else if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else if engine.events.key_held(KeyCode::O) {
-                    Mode::Options
-                }
-                else {
-                    self
-                }
-            }
-        }
-    }
-    //screen reference needs to be changed
-    fn display(&self, screen: &mut Screen) {
-        match self {
-            Mode::Title => {
-                //draw a (static?) title
-                screen.clear(Rgba(0, 0, 0, 255));
-                let display_rect = Rect {
-                    x: 0,
-                    y: 0,
-                    w: 250,
-                    h: 51,
-                };
-            }
-            Mode::Play(_paused) => {
-                // Call screen's drawing methods to render the game state
-                screen.clear(Rgba(80, 80, 80, 255));
-            }
-            Mode::Options => {
-                screen.clear(Rgba(0, 0, 0, 255));
-            }
-            Mode::EndGame => { // Draw game result?
-                screen.clear(Rgba(255, 255, 80, 255));
-            }
-        }
-    }
-}
-impl Game {
-    fn integrate(&mut self) {
-    
-    }
+    // fn update(self, input: &WinitInputHelper, engine: &mut Engine) -> Self {
+    //     match self {
+    //         Mode::Title => {
+    //             if engine.events.key_held(KeyCode::P) {
+    //                 Mode::Play(false)
+    //             }
+    //             else if engine.events.key_held(KeyCode::O) {
+    //                 Mode::Options
+    //             }
+    //             else if engine.events.key_held(KeyCode::Q) {
+    //                 panic!();
+    //             }
+    //             else {
+    //                 self
+    //             }
+    //         }
+    //         //actively playing
+    //         Mode::Play(paused) => {
+    //             //if !paused {
+    //                 //update game
+    //             //}
+    //             if engine.events.key_held(KeyCode::Space) {
+    //                 Mode::Play(!paused)
+    //             }
+    //             else if engine.events.key_held(KeyCode::T) {
+    //                 Mode::Title
+    //             }
+    //             else if engine.events.key_held(KeyCode::Q) {
+    //                 panic!();
+    //             }
+    //             else if engine.events.key_held(KeyCode::O) {
+    //                 Mode::Options
+    //             }
+    //             else {
+    //                 self
+    //             }
+    //         }
+    //         Mode::Options => {
+    //             if engine.events.key_held(KeyCode::T) {
+    //                 Mode::Title
+    //             }
+    //             else if engine.events.key_held(KeyCode::P) {
+    //                 Mode::Play(false)
+    //             }
+    //             else if engine.events.key_held(KeyCode::Q) {
+    //                 panic!();
+    //             }
+    //             else {
+    //                 self
+    //             }
+    //         }
+    //         //on play screen while dead
+    //         Mode::EndGame => {
+    //             if engine.events.key_held(KeyCode::T) {
+    //                 Mode::Title
+    //             }
+    //             else if engine.events.key_held(KeyCode::P) {
+    //                 Mode::Play(false)
+    //             }
+    //             else if engine.events.key_held(KeyCode::T) {
+    //                 Mode::Title
+    //             }
+    //             else if engine.events.key_held(KeyCode::Q) {
+    //                 panic!();
+    //             }
+    //             else if engine.events.key_held(KeyCode::O) {
+    //                 Mode::Options
+    //             }
+    //             else {
+    //                 self
+    //             }
+    //         }
+    //     }
+    // }
+    // //screen reference needs to be changed
+    // fn display(&self, screen: &mut Screen) {
+    //     match self {
+    //         Mode::Title => {
+    //             //draw a (static?) title
+    //             screen.clear(Rgba(0, 0, 0, 255));
+    //             let display_rect = Rect {
+    //                 x: 0,
+    //                 y: 0,
+    //                 w: 250,
+    //                 h: 51,
+    //             };
+    //         }
+    //         Mode::Play(_paused) => {
+    //             // Call screen's drawing methods to render the game state
+    //             screen.clear(Rgba(80, 80, 80, 255));
+    //         }
+    //         Mode::Options => {
+    //             screen.clear(Rgba(0, 0, 0, 255));
+    //         }
+    //         Mode::EndGame => { // Draw game result?
+    //             screen.clear(Rgba(255, 255, 80, 255));
+    //         }
+    //     }
+    // }
 }
 
 impl engine3d::Game for Game {
     type StaticData = GameData;
-    
+
     fn start(engine: &mut Engine) -> (Self, Self::StaticData) {
         let mut world = World::new();
 
@@ -265,212 +272,243 @@ impl engine3d::Game for Game {
         engine.set_ambient(0.05);
         let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
         (
-            Self { world, pw: vec![], light },
+            Self {
+                world,
+                pw: vec![],
+                light,
+                mode: Mode::Title,
+            },
             GameData {
                 wall_model,
                 player_model,
             },
         )
     }
-    fn render(&self, igs: &mut InstanceGroups) {
-        // need shapes, their rotations, and their models
-        let spheres = self
-            .world
-            .borrow_components_sparse_mut::<BodySphere>()
-            .unwrap();
-        let planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
-        let models = self.world.borrow_components_mut::<Model>().unwrap();
-        let rots = self.world.borrow_components_mut::<Rot>().unwrap();
 
-        // render spheres
-        for (id, body) in spheres.iter() {
-            if let Some(rot) = &rots[*id] {
-                let ir = engine3d::render::InstanceRaw {
-                    model: (Mat4::from_translation(body.0.c.to_vec())
-                        * Mat4::from_scale(body.0.r)
-                        * Mat4::from(rot.0))
-                    .into(),
+    // Returns true if rendering in 2d, false otherwise
+    fn render(&self, igs: &mut InstanceGroups, pixels: &mut (Pixels, PhysicalSize<u32>)) -> bool {
+        match self.mode {
+            Mode::Title => {
+                let mut screen = Screen::wrap(
+                    pixels.0.get_frame(),
+                    pixels.1.width as usize,
+                    pixels.1.height as usize,
+                    DEPTH,
+                    Vec2i(0, 0),
+                );
+                screen.clear(Rgba(0, 0, 0, 0));
+
+                let w = WIDTH as i32;
+                let h = HEIGHT as i32;
+                let menu_rect = Rect {
+                    x: w / 6,
+                    y: h / 8,
+                    w: (2 * w as u16) / 3,
+                    h: (h as u16) / 2,
                 };
-                if let Some(model) = &models[*id] {
-                    igs.render(model.0, ir);
+
+                screen.rect(menu_rect, Rgba(20, 0, 100, 255));
+                screen.empty_rect(menu_rect, 4, Rgba(200, 220, 255, 255));
+                pixels.0.render().unwrap();
+                return true;
+            }
+            Mode::Play(true) => {
+                // need shapes, their rotations, and their models
+                let spheres = self
+                    .world
+                    .borrow_components_sparse_mut::<BodySphere>()
+                    .unwrap();
+                let planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
+                let models = self.world.borrow_components_mut::<Model>().unwrap();
+                let rots = self.world.borrow_components_mut::<Rot>().unwrap();
+
+                // render spheres
+                for (id, body) in spheres.iter() {
+                    if let Some(rot) = &rots[*id] {
+                        let ir = engine3d::render::InstanceRaw {
+                            model: (Mat4::from_translation(body.0.c.to_vec())
+                                * Mat4::from_scale(body.0.r)
+                                * Mat4::from(rot.0))
+                            .into(),
+                        };
+                        if let Some(model) = &models[*id] {
+                            igs.render(model.0, ir);
+                        }
+                    }
+                }
+                // render planes
+                for (id, body) in planes.iter().enumerate() {
+                    if let Some(body) = body {
+                        let ir = engine3d::render::InstanceRaw {
+                            model: (Mat4::from(cgmath::Quaternion::between_vectors(
+                                Vec3::new(0.0, 1.0, 0.0),
+                                body.0.n,
+                            )) * Mat4::from_translation(Vec3::new(0.0, -0.025, 0.0))
+                                * Mat4::from_nonuniform_scale(0.5, 0.05, 0.5))
+                            .into(),
+                        };
+                        if let Some(model) = &models[id] {
+                            igs.render(model.0, ir);
+                        }
+                    }
                 }
             }
+            Mode::Play(false) => {}
+            Mode::EndGame => {}
+            Mode::Options => {}
         }
-        // render planes
-        for (id, body) in planes.iter().enumerate() {
-            if let Some(body) = body {
-                let ir = engine3d::render::InstanceRaw {
-                    model: (Mat4::from(cgmath::Quaternion::between_vectors(
-                        Vec3::new(0.0, 1.0, 0.0),
-                        body.0.n,
-                    )) * Mat4::from_translation(Vec3::new(0.0, -0.025, 0.0))
-                        * Mat4::from_nonuniform_scale(0.5, 0.05, 0.5))
-                    .into(),
-                };
-                if let Some(model) = &models[id] {
-                    igs.render(model.0, ir);
-                }
-            }
-        }
+        false
     }
 
     fn update(&mut self, engine: &mut Engine) {
-        let mut accs = self
-            .world
-            .borrow_components_sparse_mut::<Acceleration>()
-            .unwrap();
-        let mut omegas = self.world.borrow_components_mut::<Omega>().unwrap();
-
-        // IF WE WANT PLAYER CONTROLS INSTEAD OF PLANE CONTROLS
-        //
-        // // player is currently the only thing w acceleration, so search by that for now
-        // for (id, a) in accs.iter_mut().enumerate() {
-        //     if let Some(a) = a {
-        //         a.0 = Vec3::zero();
-        //         if engine.events.key_held(KeyCode::W) {
-        //             a.0.z = 1.0;
-        //         } else if engine.events.key_held(KeyCode::S) {
-        //             a.0.z = -1.0;
-        //         }
-
-        //         if engine.events.key_held(KeyCode::A) {
-        //             a.0.x = 1.0;
-        //         } else if engine.events.key_held(KeyCode::D) {
-        //             a.0.x = -1.0;
-        //         }
-        //         if a.0.magnitude2() > 1.0 {
-        //             a.0 = a.0.normalize();
-        //         }
-        //         if let Some(om) = &mut omegas[id] {
-        //             if engine.events.key_held(KeyCode::Q) {
-        //                 om.0 = Vec3::unit_y();
-        //             } else if engine.events.key_held(KeyCode::E) {
-        //                 om.0 = -Vec3::unit_y();
-        //             } else {
-        //                 om.0 = Vec3::zero();
-        //             }
-        //         }
-        //     }
-        // }
-
-        // only one thing is controllable, so its fine for now
-        let mut controls = self.world.borrow_components_mut::<Control>().unwrap();
-        for c in controls.iter_mut() {
-            if let Some(cont) = c {
-                cont.0 .0 = if engine.events.key_held(KeyCode::A) {
-                    -1
-                } else if engine.events.key_held(KeyCode::D) {
-                    1
-                } else {
-                    0
-                };
-                cont.0 .1 = if engine.events.key_held(KeyCode::W) {
-                    -1
-                } else if engine.events.key_held(KeyCode::S) {
-                    1
-                } else {
-                    0
-                };
-            }
-        }
-
-        // integrate planes
-        let mut planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
-
-        for (id, body) in planes.iter_mut().enumerate() {
-            if let Some(body) = body {
-                if let Some(c) = &controls[id] {
-                    body.0.n += Vec3::new(c.0.0 as f32 * PLANE_ROT_SPEED * DT, 0.0, c.0.1 as f32 * PLANE_ROT_SPEED * DT);
-                    body.0.n = body.0.n.normalize();
+        match self.mode {
+            Mode::Title => {
+                if engine.events.key_held(KeyCode::Return) {
+                    self.mode = Mode::Play(true);
                 }
             }
-        }
+            Mode::Play(true) => {
+                let mut accs = self
+                    .world
+                    .borrow_components_sparse_mut::<Acceleration>()
+                    .unwrap();
+                let mut omegas = self.world.borrow_components_mut::<Omega>().unwrap();
 
-        // integrate spheres
-        let mut spheres = self
-            .world
-            .borrow_components_sparse_mut::<BodySphere>()
-            .unwrap();
-        let mut vels = self.world.borrow_components_sparse_mut::<Velocity>().unwrap();
-        let mut rots = self.world.borrow_components_mut::<Rot>().unwrap();
-        let mut ps = self.world.borrow_components_sparse_mut::<LinearMomentum>().unwrap();
-        let mut masses = self.world.borrow_components_sparse_mut::<Mass>().unwrap();
-
-        // collisions between player and floor
-        self.pw.clear();
-
-        let mut walls = vec![];
-        for w in planes.iter() {
-            if let Some(w) = w {
-                walls.push(w.0);
-            }
-        }
-
-        // get values for bodies, velocities, momentums, and masses for collision
-        let mut pb = vec![];
-        let mut pv = vec![];
-        let mut pp = vec![];
-        let mut pm = vec![];
-        let mut player_id = 0;
-
-        for (id, s) in spheres.iter() {
-            player_id = *id;
-            pb.push(s.0);
-            pv.push(vels[&id].0);
-            pp.push(ps[&id].0);
-            pm.push(masses[&id].0);
-        }
-
-        collision::gather_contacts_ab(&pb, &walls, &mut self.pw);
-        collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
-        spheres.get_mut(&player_id).unwrap().0 = pb[0];
-        ps.get_mut(&player_id).unwrap().0 = pp[0];
-
-        for collision::Contact { a: pa, .. } in self.pw.iter() {
-            // apply "friction" to players on the ground
-            assert_eq!(*pa, 0);
-            vels.get_mut(&player_id).unwrap().0 *= 0.98;
-        }
-
-        // update spheres (apply gravity, momentum, etc)
-        for (id, body) in spheres.iter_mut() {
-            // control sphere (includes the player)
-            let m = &masses[&id];
-            let a = &accs[&id];
-            if let Some(r) = &mut rots[*id] {
-                if let Some(o) = &omegas[*id] {
-                    ps.get_mut(&id).unwrap().0 += ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
-                    vels.get_mut(&id).unwrap().0 = ps[&id].0 / m.0;
-                    if vels[&id].0.magnitude() > MAX_PLAYER_VELOCITY {
-                        vels.get_mut(&id).unwrap().0 = vels[&id].0.normalize_to(MAX_PLAYER_VELOCITY);
+                // only one thing is controllable, so its fine for now
+                let mut controls = self.world.borrow_components_mut::<Control>().unwrap();
+                for c in controls.iter_mut() {
+                    if let Some(cont) = c {
+                        cont.0 .0 = if engine.events.key_held(KeyCode::A) {
+                            -1
+                        } else if engine.events.key_held(KeyCode::D) {
+                            1
+                        } else {
+                            0
+                        };
+                        cont.0 .1 = if engine.events.key_held(KeyCode::W) {
+                            -1
+                        } else if engine.events.key_held(KeyCode::S) {
+                            1
+                        } else {
+                            0
+                        };
                     }
-                    body.0.c += vels[&id].0 * DT;
-                    r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
                 }
-            }
-        }
 
-        // lights
-        let light_pos = self.light.position();
-        let light_pos = if engine.events.key_held(KeyCode::A) {
-            Quat::from(cgmath::Euler::new(
-                cgmath::Deg(0.0),
-                cgmath::Deg(-90.0 * DT),
-                cgmath::Deg(0.0),
-            ))
-            .rotate_point(light_pos)
-        } else if engine.events.key_held(KeyCode::D) {
-            Quat::from(cgmath::Euler::new(
-                cgmath::Deg(0.0),
-                cgmath::Deg(90.0 * DT),
-                cgmath::Deg(0.0),
-            ))
-            .rotate_point(light_pos)
-        } else {
-            light_pos
-        };
-        self.light = Light::point(light_pos, self.light.color());
-        engine.set_lights(vec![self.light]);
+                // integrate planes
+                let mut planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
+
+                for (id, body) in planes.iter_mut().enumerate() {
+                    if let Some(body) = body {
+                        if let Some(c) = &controls[id] {
+                            body.0.n += Vec3::new(
+                                c.0 .0 as f32 * PLANE_ROT_SPEED * DT,
+                                0.0,
+                                c.0 .1 as f32 * PLANE_ROT_SPEED * DT,
+                            );
+                            body.0.n = body.0.n.normalize();
+                        }
+                    }
+                }
+
+                // integrate spheres
+                let mut spheres = self
+                    .world
+                    .borrow_components_sparse_mut::<BodySphere>()
+                    .unwrap();
+                let mut vels = self
+                    .world
+                    .borrow_components_sparse_mut::<Velocity>()
+                    .unwrap();
+                let mut rots = self.world.borrow_components_mut::<Rot>().unwrap();
+                let mut ps = self
+                    .world
+                    .borrow_components_sparse_mut::<LinearMomentum>()
+                    .unwrap();
+                let mut masses = self.world.borrow_components_sparse_mut::<Mass>().unwrap();
+
+                // collisions between player and floor
+                self.pw.clear();
+
+                let mut walls = vec![];
+                for w in planes.iter() {
+                    if let Some(w) = w {
+                        walls.push(w.0);
+                    }
+                }
+
+                // get values for bodies, velocities, momentums, and masses for collision
+                let mut pb = vec![];
+                let mut pv = vec![];
+                let mut pp = vec![];
+                let mut pm = vec![];
+                let mut player_id = 0;
+
+                for (id, s) in spheres.iter() {
+                    player_id = *id;
+                    pb.push(s.0);
+                    pv.push(vels[&id].0);
+                    pp.push(ps[&id].0);
+                    pm.push(masses[&id].0);
+                }
+
+                collision::gather_contacts_ab(&pb, &walls, &mut self.pw);
+                collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
+                spheres.get_mut(&player_id).unwrap().0 = pb[0];
+                ps.get_mut(&player_id).unwrap().0 = pp[0];
+
+                for collision::Contact { a: pa, .. } in self.pw.iter() {
+                    // apply "friction" to players on the ground
+                    assert_eq!(*pa, 0);
+                    vels.get_mut(&player_id).unwrap().0 *= 0.98;
+                }
+
+                // update spheres (apply gravity, momentum, etc)
+                for (id, body) in spheres.iter_mut() {
+                    // control sphere (includes the player)
+                    let m = &masses[&id];
+                    let a = &accs[&id];
+                    if let Some(r) = &mut rots[*id] {
+                        if let Some(o) = &omegas[*id] {
+                            ps.get_mut(&id).unwrap().0 +=
+                                ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
+                            vels.get_mut(&id).unwrap().0 = ps[&id].0 / m.0;
+                            if vels[&id].0.magnitude() > MAX_PLAYER_VELOCITY {
+                                vels.get_mut(&id).unwrap().0 =
+                                    vels[&id].0.normalize_to(MAX_PLAYER_VELOCITY);
+                            }
+                            body.0.c += vels[&id].0 * DT;
+                            r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
+                        }
+                    }
+                }
+
+                // lights
+                let light_pos = self.light.position();
+                let light_pos = if engine.events.key_held(KeyCode::A) {
+                    Quat::from(cgmath::Euler::new(
+                        cgmath::Deg(0.0),
+                        cgmath::Deg(-90.0 * DT),
+                        cgmath::Deg(0.0),
+                    ))
+                    .rotate_point(light_pos)
+                } else if engine.events.key_held(KeyCode::D) {
+                    Quat::from(cgmath::Euler::new(
+                        cgmath::Deg(0.0),
+                        cgmath::Deg(90.0 * DT),
+                        cgmath::Deg(0.0),
+                    ))
+                    .rotate_point(light_pos)
+                } else {
+                    light_pos
+                };
+                self.light = Light::point(light_pos, self.light.color());
+                engine.set_lights(vec![self.light]);
+            }
+            Mode::Play(false) => {}
+            Mode::Options => {}
+            Mode::EndGame => {}
+        }
     }
 }
 
@@ -478,19 +516,14 @@ fn main() {
     env_logger::init();
     let title = env!("CARGO_PKG_NAME");
     let window = winit::window::WindowBuilder::new().with_title(title);
-    
-    
 
     let mut mode = Mode::Title;
-    let camera_position = Vec2i(0,0);
-
+    //let camera_position = Vec2i(0,0);
 
     //pixels.get_frame() needs to be replaced with framebuffer that works with render & its buffers
     //let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
     //screen.clear(CLEAR_COL);
-    mode.display(&mut state, &mut data, &mut screen); 
-    
-    
+    //mode.display(&mut state, &mut data, &mut screen);
 
     run::<GameData, Game>(window, std::path::Path::new("content"));
 }

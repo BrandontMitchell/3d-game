@@ -35,7 +35,11 @@ impl World {
     }
 
     // adds a single component to an entity
-    pub fn add_component<ComponentType: 'static + Component>(&mut self, id: usize, c: ComponentType) {
+    pub fn add_component<ComponentType: 'static + Component>(
+        &mut self,
+        id: usize,
+        c: ComponentType,
+    ) {
         match c.is_sparse() {
             true => {
                 for component_map in self.components_sparse.iter_mut() {
@@ -47,13 +51,13 @@ impl World {
                         return;
                     }
                 }
-        
+
                 // if component map doesn't exist, create it
                 let mut new_component_map: HashMap<usize, ComponentType> = HashMap::new();
                 new_component_map.insert(id, c);
-                self.components_sparse.push(Box::new(RefCell::new(new_component_map)));
-                
-            },
+                self.components_sparse
+                    .push(Box::new(RefCell::new(new_component_map)));
+            }
             false => {
                 for component_vec in self.components.iter_mut() {
                     if let Some(component_vec) = component_vec
@@ -64,7 +68,7 @@ impl World {
                         return;
                     }
                 }
-        
+
                 // if component vec doesn't exist, create it
                 // have to create spots for all existing entities
                 let mut new_component_vec: Vec<Option<ComponentType>> =
@@ -91,11 +95,11 @@ impl World {
         }
         for component_map in self.components_sparse.iter_mut() {
             if let Some(component_map) = component_map
-                        .as_any_mut()
-                        .downcast_mut::<RefCell<HashMap<usize, ComponentType>>>()
-                    {
-                        component_map.get_mut().remove(&id);
-                    }
+                .as_any_mut()
+                .downcast_mut::<RefCell<HashMap<usize, ComponentType>>>()
+            {
+                component_map.get_mut().remove(&id);
+            }
         }
         self.num_entities -= 1;
     }
@@ -116,14 +120,16 @@ impl World {
     }
 
     // get a component map
-    pub fn borrow_components_sparse_mut<ComponentType: 'static>(&self) -> Option<RefMut<HashMap<usize, ComponentType>>> {
+    pub fn borrow_components_sparse_mut<ComponentType: 'static>(
+        &self,
+    ) -> Option<RefMut<HashMap<usize, ComponentType>>> {
         for component_map in self.components_sparse.iter() {
             if let Some(component_map) = component_map
-                        .as_any()
-                        .downcast_ref::<RefCell<HashMap<usize, ComponentType>>>()
-                    {
-                        return Some(component_map.borrow_mut());
-                    }
+                .as_any()
+                .downcast_ref::<RefCell<HashMap<usize, ComponentType>>>()
+            {
+                return Some(component_map.borrow_mut());
+            }
         }
         None
     }

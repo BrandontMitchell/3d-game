@@ -31,7 +31,8 @@ pub fn restitute_dyn_stat<S1: Shape, S2: Shape>(
             if disp.magnitude() > 0.0 {
                 ashapes[a].translate(disp);
                 let elasticity = 0.5;
-                let j = (-(1.0 + elasticity) * (avels[a] * amasses[a]).dot(disp.normalize())).max(0.0);
+                let j =
+                    (-(1.0 + elasticity) * (avels[a] * amasses[a]).dot(disp.normalize())).max(0.0);
                 aps[a] += j * disp.normalize();
             }
         }
