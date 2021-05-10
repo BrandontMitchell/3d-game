@@ -38,6 +38,7 @@ use winit_input_helper::WinitInputHelper;
 //use serde::{Serialize, Deserialize};
 
 const G: f32 = 15.0;
+const END_G: f32 = 100.0;
 const MAX_PLAYER_VELOCITY: f32 = 20.0;
 const PLANE_ROT_SPEED: f32 = 0.6;
 
@@ -152,6 +153,7 @@ struct GameSave {
 struct Game {
     gamesave: GameSave,
     pw: Vec<collision::Contact<usize>>,
+    pe: Vec<collision::Contact<usize>>,
     mode: Mode,
     camera_controller: CameraController,
     fonts: Fonts,
@@ -353,7 +355,7 @@ impl engine3d::Game for Game {
         world.add_component(
             end_sphere,
             EndSphere(Sphere {
-                c: Pos3::new(3.0, 1.0, 8.0), // todo make random and match plane height
+                c: Pos3::new(0.0, 3.0, 5.0), // todo make random and match plane height
                 r,
             }),
         );
@@ -362,6 +364,8 @@ impl engine3d::Game for Game {
         world.add_component(end_sphere, Omega(Vec3::zero()));
         world.add_component(end_sphere, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
         world.add_component(end_sphere, LinearMomentum(Vec3::zero()));
+        let mass = (r * 4.0).powi(3);
+        world.add_component(end_sphere, Mass(mass));
 
         // add models to wall and player
         let wall_model = engine.load_model("floor.obj");
@@ -392,6 +396,7 @@ impl engine3d::Game for Game {
             Self {
                 gamesave: game_save,
                 pw: vec![],
+                pe: vec![],
                 mode: Mode::Title,
                 camera_controller,
                 fonts: Fonts::new(fonts),
@@ -621,6 +626,12 @@ impl engine3d::Game for Game {
                     .world
                     .borrow_components_sparse_mut::<BodySphere>()
                     .unwrap();
+
+                let mut end_spheres = self
+                    .gamesave
+                    .world
+                    .borrow_components_sparse_mut::<EndSphere>()
+                    .unwrap();
                 let mut vels = self
                     .gamesave
                     .world
@@ -640,6 +651,7 @@ impl engine3d::Game for Game {
 
                 // collisions between player and floor
                 self.pw.clear();
+                self.pe.clear();
 
                 let mut walls = vec![];
                 for w in planes.iter() {
@@ -663,10 +675,30 @@ impl engine3d::Game for Game {
                     pm.push(masses[&id].0);
                 }
 
+                // get values for bodies, velocities, momentums, and masses for collision
+                let mut eb = vec![];
+                let mut ev = vec![];
+                let mut ep = vec![];
+                let mut em = vec![];
+                let mut end_id = 0;
+
+                for (id, s) in end_spheres.iter() {
+                    end_id = *id;
+                    eb.push(s.0);
+                    ev.push(vels[&id].0);
+                    ep.push(ps[&id].0);
+                    em.push(masses[&id].0);
+                }
+
                 collision::gather_contacts_ab(&pb, &walls, &mut self.pw);
                 collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
+                collision::gather_contacts_ab(&eb, &walls, &mut self.pw);
+                collision::restitute_dyn_stat(&mut eb, &ev, &mut ep, &em, &walls, &mut self.pw);
+                collision::gather_contacts_ab_ball(&pb, &eb, &mut self.pe);
                 spheres.get_mut(&player_id).unwrap().0 = pb[0];
                 ps.get_mut(&player_id).unwrap().0 = pp[0];
+                end_spheres.get_mut(&end_id).unwrap().0 = eb[0];
+                ps.get_mut(&end_id).unwrap().0 = ep[0];
 
                 // update spheres (apply gravity, momentum, etc)
                 for (id, body) in spheres.iter_mut() {
@@ -684,6 +716,23 @@ impl engine3d::Game for Game {
                                     vels[&id].0.normalize_to(MAX_PLAYER_VELOCITY);
                             }
                             body.0.c += vels[&id].0 * DT;
+                            r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
+                        }
+                    }
+                }
+
+                // end object 
+                for (id, body) in end_spheres.iter_mut() {
+                    // control sphere (includes the player)
+                    let m = &masses[&id];
+                    let a = &accs[&id];
+                    if let Some(r) = &mut rots[*id] {
+                        if let Some(o) = &omegas[*id] {
+                            ps.get_mut(&id).unwrap().0 +=
+                                ((r.0 * a.0) + Vec3::new(0.0, -END_G*2.0, 0.0)) * DT;
+                            vels.get_mut(&id).unwrap().0 = ps[&id].0 / m.0;
+                            vels.get_mut(&id).unwrap().0 *= 1.0; // friction
+                            body.0.c += Vec3::new(0.0, 1.0*-DT, 0.0);
                             r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
                         }
                     }
