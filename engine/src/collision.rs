@@ -106,23 +106,6 @@ where
     }
 }
 
-pub fn gather_contacts_ab_ball<S1: Shape, S2: Shape>(a: &[S1], b: &[S2], into: &mut Vec<Contact<usize>>)
-where
-    S1: Collide<S2>,
-{
-    println!("HIT!");
-    for (ai, a) in a.iter().enumerate() {
-        for (bi, b) in b.iter().enumerate() {
-            if let Some(disp) = a.disp(b) {
-                into.push(Contact {
-                    a: ai,
-                    b: bi,
-                    mtv: disp,
-                });
-            }
-        }
-    }
-}
 
 pub fn gather_contacts_aa<S1: Shape>(ss: &[S1], into: &mut Vec<Contact<usize>>)
 where

@@ -627,7 +627,11 @@ impl engine3d::Game for Game {
                 collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
                 collision::gather_contacts_ab(&eb, &walls, &mut self.pw);
                 collision::restitute_dyn_stat(&mut eb, &ev, &mut ep, &em, &walls, &mut self.pw);
-                collision::gather_contacts_ab_ball(&pb, &eb, &mut self.pe);
+                collision::gather_contacts_ab(&pb, &eb, &mut self.pe);
+
+                if self.pe.len() > 0 {
+                    println!("END");
+                };
                 spheres.get_mut(&player_id).unwrap().0 = pb[0];
                 ps.get_mut(&player_id).unwrap().0 = pp[0];
                 end_spheres.get_mut(&end_id).unwrap().0 = eb[0];
