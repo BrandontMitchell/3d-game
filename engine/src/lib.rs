@@ -6,6 +6,8 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     platform::run_return::EventLoopExtRunReturn,
 };
+#[macro_use]
+extern crate savefile_derive;
 
 pub mod camera;
 pub mod collision;
@@ -22,6 +24,7 @@ pub mod components;
 pub mod lights;
 pub mod screen;
 pub mod world;
+pub mod camera_control;
 
 pub const DT: f32 = 1.0 / 60.0;
 

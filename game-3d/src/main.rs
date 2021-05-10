@@ -14,6 +14,7 @@ use engine3d::{
     screen::Screen,
     world::World,
     Engine, DT,
+    camera_control::CameraController
 };
 use pixels::{Pixels, SurfaceTexture};
 
@@ -136,7 +137,7 @@ use savefile::prelude::*;
 #[macro_use]
 extern crate savefile_derive;
 //use savefile_derive::Savefile;
-#[derive(Savefile)] /////////////////////////comment out this line to get rid of error
+//#[derive(Savefile)] /////////////////////////comment out this line to get rid of error
 struct GameSave {
     world: World,
     light: Light,
@@ -148,6 +149,7 @@ struct Game {
     gamesave: GameSave,
     pw: Vec<collision::Contact<usize>>,
     mode: Mode,
+    camera_controller: CameraController,
 }
 
 impl Game {
@@ -300,6 +302,13 @@ impl engine3d::Game for Game {
                 r,
             }),
         );
+        world.add_component(player, Velocity(Vec3::zero()));
+        world.add_component(player, Acceleration(Vec3::zero()));
+        world.add_component(player, Omega(Vec3::zero()));
+        world.add_component(player, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
+        world.add_component(player, LinearMomentum(Vec3::zero()));
+        let mass = (r * 4.0).powi(3);
+        world.add_component(player, Mass(mass));
 
         let end_sphere = world.add_entity();
         let r = 0.8;
@@ -315,13 +324,6 @@ impl engine3d::Game for Game {
         world.add_component(end_sphere, Omega(Vec3::zero()));
         world.add_component(end_sphere, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
         world.add_component(end_sphere, LinearMomentum(Vec3::zero()));
-        world.add_component(player, Velocity(Vec3::zero()));
-        world.add_component(player, Acceleration(Vec3::zero()));
-        world.add_component(player, Omega(Vec3::zero()));
-        world.add_component(player, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
-        world.add_component(player, LinearMomentum(Vec3::zero()));
-        let mass = (r * 4.0).powi(3);
-        world.add_component(player, Mass(mass));
 
         // add models to wall and player
         let wall_model = engine.load_model("floor.obj");
@@ -335,6 +337,7 @@ impl engine3d::Game for Game {
         let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
 
         let game_save = GameSave{world: world, light: light};
+        let camera_controller = CameraController::new(0.2);
         (
 /*             Self {
                 world,
@@ -343,9 +346,10 @@ impl engine3d::Game for Game {
                 mode: Mode::Title,
             }, */
             Self {
-                game_save,
+                gamesave: game_save,
                 pw: vec![],
                 mode: Mode::Title,
+                camera_controller
             },
             GameData {
                 wall_model,
@@ -389,7 +393,7 @@ impl engine3d::Game for Game {
                     .unwrap();
                 let end_objects = self.gamesave.world.borrow_components_sparse_mut::<EndSphere>().unwrap();
                 let planes = self.gamesave.world.borrow_components_mut::<BodyPlane>().unwrap();
-                let models = self.world.borrow_components_mut::<Model>().unwrap();
+                let models = self.gamesave.world.borrow_components_mut::<Model>().unwrap();
                 let rots = self.gamesave.world.borrow_components_mut::<Rot>().unwrap();
 
                 // render spheres
@@ -455,6 +459,7 @@ impl engine3d::Game for Game {
                 }
             }
             Mode::Play(true) => {
+                self.camera_controller.update(engine);
                 let mut accs = self.gamesave.world
                     .borrow_components_sparse_mut::<Acceleration>()
                     .unwrap();
