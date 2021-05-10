@@ -370,9 +370,9 @@ impl engine3d::Game for Game {
                     DEPTH,
                     Vec2i(0, 0),
                 );
-                screen.clear(Rgba(255, 0, 255, 0));
+                screen.clear(Rgba(0, 0, 255, 0));
 
-                let w = WIDTH as i32;
+/*                 let w = WIDTH as i32;
                 let h = HEIGHT as i32;
                 let menu_rect = Rect {
                     x: w / 6,
@@ -382,11 +382,13 @@ impl engine3d::Game for Game {
                 };
 
                 screen.rect(menu_rect, Rgba(20, 0, 100, 255));
-                screen.empty_rect(menu_rect, 4, Rgba(200, 220, 255, 255));
+                screen.empty_rect(menu_rect, 4, Rgba(200, 220, 255, 255)); */
                 pixels.0.render().unwrap();
                 return true;
             }
-            Mode::Play(true) => {
+            Mode::EndGame => {}
+            Mode::Options => {}
+            Mode::Play(live) => {
                 // need shapes, their rotations, and their models
                 let spheres = self.gamesave.world
                     .borrow_components_sparse_mut::<BodySphere>()
@@ -444,9 +446,6 @@ impl engine3d::Game for Game {
                     }
                 }
             }
-            Mode::Play(false) => {}
-            Mode::EndGame => {}
-            Mode::Options => {}
         }
         false
     }
@@ -454,11 +453,28 @@ impl engine3d::Game for Game {
     fn update(&mut self, engine: &mut Engine) {
         match self.mode {
             Mode::Title => {
-                if engine.events.key_held(KeyCode::Return) {
+                if engine.events.key_held(KeyCode::Return) || engine.events.key_held(KeyCode::P){
                     self.mode = Mode::Play(true);
+                } else if engine.events.key_held(KeyCode::O) {
+                    self.mode = Mode::Options;
+                } else if engine.events.key_held(KeyCode::Q) {
+                    panic!();
                 }
             }
-            Mode::Play(true) => {
+            Mode::Options => {
+                if engine.events.key_held(KeyCode::P) {
+                    self.mode = Mode::Play(true);
+                } else if engine.events.key_held(KeyCode::Q) {
+                    panic!();
+                }
+            }
+            Mode::EndGame => {}
+            Mode::Play(live) => {
+                if engine.events.key_held(KeyCode::O) {
+                    self.mode = Mode::Options;
+                } else if engine.events.key_held(KeyCode::Q) {
+                    panic!();
+                }
                 self.camera_controller.update(engine);
                 let mut accs = self.gamesave.world
                     .borrow_components_sparse_mut::<Acceleration>()
@@ -596,9 +612,6 @@ impl engine3d::Game for Game {
                 self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
                 engine.set_lights(vec![self.gamesave.light]);
             }
-            Mode::Play(false) => {}
-            Mode::Options => {}
-            Mode::EndGame => {}
         }
     }
 }
