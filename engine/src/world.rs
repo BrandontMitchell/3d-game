@@ -7,6 +7,13 @@ use std::{
 // Implementation based on:
 // https://ianjk.com/ecs-in-rust/
 
+/* extern crate savefile;
+use savefile::prelude::*;
+
+#[macro_use]
+extern crate savefile_derive;
+
+#[derive(Savefile)] */
 pub struct World {
     num_entities: usize,
     components: Vec<Box<dyn ComponentStorage>>, // VECS ONLY

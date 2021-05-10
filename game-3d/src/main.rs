@@ -122,20 +122,23 @@ extern crate savefile_derive;
 //#[derive()]
 //#[derive(Clone, Copy, Savefile)]
 extern crate savefile;
-//use savefile::prelude::*;
-use savefile::{Serialize, Deserialize};
+use savefile::prelude::*;
+//use savefile::{Serialize, Deserialize};
 
-//#[macro_use]
+#[macro_use]
 extern crate savefile_derive;
-use savefile_derive::Savefile;
-
+//use savefile_derive::Savefile;
+#[derive(Savefile)] /////////////////////////comment out this line to get rid of error
+struct GameSave {
+    world: World,
+    light: Light,
+}
 //#[derive(Clone, Serialize, Deserialize)]
 //#[repr(C)]
-//#[derive(Serialize, Deserialize, Savefile)]
+//#[derive(Savefile)]
 struct Game {
-    world: World,
+    gamesave: GameSave,
     pw: Vec<collision::Contact<usize>>,
-    light: Light,
     mode: Mode,
 }
 
@@ -157,109 +160,109 @@ enum Mode {
     EndGame,
 }
 
-//not fully implemented
+/* //not fully implemented
 impl Mode {
-    // update consumes self and yields a new state (which might also just be self)
-    // fn update(self, input: &WinitInputHelper, engine: &mut Engine) -> Self {
-    //     match self {
-    //         Mode::Title => {
-    //             if engine.events.key_held(KeyCode::P) {
-    //                 Mode::Play(false)
-    //             }
-    //             else if engine.events.key_held(KeyCode::O) {
-    //                 Mode::Options
-    //             }
-    //             else if engine.events.key_held(KeyCode::Q) {
-    //                 panic!();
-    //             }
-    //             else {
-    //                 self
-    //             }
-    //         }
-    //         //actively playing
-    //         Mode::Play(paused) => {
-    //             //if !paused {
-    //                 //update game
-    //             //}
-    //             if engine.events.key_held(KeyCode::Space) {
-    //                 Mode::Play(!paused)
-    //             }
-    //             else if engine.events.key_held(KeyCode::T) {
-    //                 Mode::Title
-    //             }
-    //             else if engine.events.key_held(KeyCode::Q) {
-    //                 panic!();
-    //             }
-    //             else if engine.events.key_held(KeyCode::O) {
-    //                 Mode::Options
-    //             }
-    //             else {
-    //                 self
-    //             }
-    //         }
-    //         Mode::Options => {
-    //             if engine.events.key_held(KeyCode::T) {
-    //                 Mode::Title
-    //             }
-    //             else if engine.events.key_held(KeyCode::P) {
-    //                 Mode::Play(false)
-    //             }
-    //             else if engine.events.key_held(KeyCode::Q) {
-    //                 panic!();
-    //             }
-    //             else {
-    //                 self
-    //             }
-    //         }
-    //         //on play screen while dead
-    //         Mode::EndGame => {
-    //             if engine.events.key_held(KeyCode::T) {
-    //                 Mode::Title
-    //             }
-    //             else if engine.events.key_held(KeyCode::P) {
-    //                 Mode::Play(false)
-    //             }
-    //             else if engine.events.key_held(KeyCode::T) {
-    //                 Mode::Title
-    //             }
-    //             else if engine.events.key_held(KeyCode::Q) {
-    //                 panic!();
-    //             }
-    //             else if engine.events.key_held(KeyCode::O) {
-    //                 Mode::Options
-    //             }
-    //             else {
-    //                 self
-    //             }
-    //         }
-    //     }
-    // }
-    // //screen reference needs to be changed
-    // fn display(&self, screen: &mut Screen) {
-    //     match self {
-    //         Mode::Title => {
-    //             //draw a (static?) title
-    //             screen.clear(Rgba(0, 0, 0, 255));
-    //             let display_rect = Rect {
-    //                 x: 0,
-    //                 y: 0,
-    //                 w: 250,
-    //                 h: 51,
-    //             };
-    //         }
-    //         Mode::Play(_paused) => {
-    //             // Call screen's drawing methods to render the game state
-    //             screen.clear(Rgba(80, 80, 80, 255));
-    //         }
-    //         Mode::Options => {
-    //             screen.clear(Rgba(0, 0, 0, 255));
-    //         }
-    //         Mode::EndGame => { // Draw game result?
-    //             screen.clear(Rgba(255, 255, 80, 255));
-    //         }
-    //     }
-    // }
-}
+    //update consumes self and yields a new state (which might also just be self)
+    fn modeupdate(self, input: &WinitInputHelper, engine: &mut Engine) -> Self {
+        match self {
+            Mode::Title => {
+                if engine.events.key_held(KeyCode::P) {
+                    Mode::Play(false)
+                }
+                else if engine.events.key_held(KeyCode::O) {
+                    Mode::Options
+                }
+                else if engine.events.key_held(KeyCode::Q) {
+                    panic!();
+                }
+                else {
+                    self
+                }
+            }
+            //actively playing
+            Mode::Play(paused) => {
+                //if !paused {
+                    //update game
+                //}
+                if engine.events.key_held(KeyCode::Space) {
+                    Mode::Play(!paused)
+                }
+                else if engine.events.key_held(KeyCode::T) {
+                    Mode::Title
+                }
+                else if engine.events.key_held(KeyCode::Q) {
+                    panic!();
+                }
+                else if engine.events.key_held(KeyCode::O) {
+                    Mode::Options
+                }
+                else {
+                    self
+                }
+            }
+            Mode::Options => {
+                if engine.events.key_held(KeyCode::T) {
+                    Mode::Title
+                }
+                else if engine.events.key_held(KeyCode::P) {
+                    Mode::Play(false)
+                }
+                else if engine.events.key_held(KeyCode::Q) {
+                    panic!();
+                }
+                else {
+                    self
+                }
+            }
+            //on play screen while dead
+            Mode::EndGame => {
+                if engine.events.key_held(KeyCode::T) {
+                    Mode::Title
+                }
+                else if engine.events.key_held(KeyCode::P) {
+                    Mode::Play(false)
+                }
+                else if engine.events.key_held(KeyCode::T) {
+                    Mode::Title
+                }
+                else if engine.events.key_held(KeyCode::Q) {
+                    panic!();
+                }
+                else if engine.events.key_held(KeyCode::O) {
+                    Mode::Options
+                }
+                else {
+                    self
+                }
+            }
+        }
+    }
+    //screen reference needs to be changed
+    fn modedisplay(&self, screen: &mut Screen) {
+        match self {
+            Mode::Title => {
+                //draw a (static?) title
+                screen.clear(Rgba(0, 0, 255, 255));
+                let display_rect = Rect {
+                    x: 0,
+                    y: 0,
+                    w: 250,
+                    h: 51,
+                };
+            }
+            Mode::Play(_paused) => {
+                // Call screen's drawing methods to render the game state
+                screen.clear(Rgba(80, 80, 80, 255));
+            }
+            Mode::Options => {
+                screen.clear(Rgba(0, 0, 0, 255));
+            }
+            Mode::EndGame => { // Draw game result?
+                screen.clear(Rgba(255, 255, 80, 255));
+            }
+        }
+    }
+} */
 
 impl engine3d::Game for Game {
     type StaticData = GameData;
@@ -304,11 +307,18 @@ impl engine3d::Game for Game {
 
         engine.set_ambient(0.05);
         let light = Light::point(Pos3::new(0.0, 10.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
+
+        let game_save = GameSave{world: world, light: light};
         (
-            Self {
+/*             Self {
                 world,
                 pw: vec![],
                 light,
+                mode: Mode::Title,
+            }, */
+            Self {
+                game_save,
+                pw: vec![],
                 mode: Mode::Title,
             },
             GameData {
@@ -329,7 +339,7 @@ impl engine3d::Game for Game {
                     DEPTH,
                     Vec2i(0, 0),
                 );
-                screen.clear(Rgba(0, 0, 0, 0));
+                screen.clear(Rgba(255, 0, 255, 0));
 
                 let w = WIDTH as i32;
                 let h = HEIGHT as i32;
@@ -347,13 +357,12 @@ impl engine3d::Game for Game {
             }
             Mode::Play(true) => {
                 // need shapes, their rotations, and their models
-                let spheres = self
-                    .world
+                let spheres = self.gamesave.world
                     .borrow_components_sparse_mut::<BodySphere>()
                     .unwrap();
-                let planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
-                let models = self.world.borrow_components_mut::<Model>().unwrap();
-                let rots = self.world.borrow_components_mut::<Rot>().unwrap();
+                let planes = self.gamesave.world.borrow_components_mut::<BodyPlane>().unwrap();
+                let models = self.gamesave.world.borrow_components_mut::<Model>().unwrap();
+                let rots = self.gamesave.world.borrow_components_mut::<Rot>().unwrap();
 
                 // render spheres
                 for (id, body) in spheres.iter() {
@@ -401,14 +410,13 @@ impl engine3d::Game for Game {
                 }
             }
             Mode::Play(true) => {
-                let mut accs = self
-                    .world
+                let mut accs = self.gamesave.world
                     .borrow_components_sparse_mut::<Acceleration>()
                     .unwrap();
-                let mut omegas = self.world.borrow_components_mut::<Omega>().unwrap();
+                let mut omegas = self.gamesave.world.borrow_components_mut::<Omega>().unwrap();
 
                 // only one thing is controllable, so its fine for now
-                let mut controls = self.world.borrow_components_mut::<Control>().unwrap();
+                let mut controls = self.gamesave.world.borrow_components_mut::<Control>().unwrap();
                 for c in controls.iter_mut() {
                     if let Some(cont) = c {
                         cont.0 .0 = if engine.events.key_held(KeyCode::A) {
@@ -429,7 +437,7 @@ impl engine3d::Game for Game {
                 }
 
                 // integrate planes
-                let mut planes = self.world.borrow_components_mut::<BodyPlane>().unwrap();
+                let mut planes = self.gamesave.world.borrow_components_mut::<BodyPlane>().unwrap();
 
                 for (id, body) in planes.iter_mut().enumerate() {
                     if let Some(body) = body {
@@ -445,20 +453,20 @@ impl engine3d::Game for Game {
                 }
 
                 // integrate spheres
-                let mut spheres = self
+                let mut spheres = self.gamesave
                     .world
                     .borrow_components_sparse_mut::<BodySphere>()
                     .unwrap();
-                let mut vels = self
+                let mut vels = self.gamesave
                     .world
                     .borrow_components_sparse_mut::<Velocity>()
                     .unwrap();
-                let mut rots = self.world.borrow_components_mut::<Rot>().unwrap();
-                let mut ps = self
+                let mut rots = self.gamesave.world.borrow_components_mut::<Rot>().unwrap();
+                let mut ps = self.gamesave
                     .world
                     .borrow_components_sparse_mut::<LinearMomentum>()
                     .unwrap();
-                let mut masses = self.world.borrow_components_sparse_mut::<Mass>().unwrap();
+                let mut masses = self.gamesave.world.borrow_components_sparse_mut::<Mass>().unwrap();
 
                 // collisions between player and floor
                 self.pw.clear();
@@ -517,7 +525,7 @@ impl engine3d::Game for Game {
                 }
 
                 // lights
-                let light_pos = self.light.position();
+                let light_pos = self.gamesave.light.position();
                 let light_pos = if engine.events.key_held(KeyCode::A) {
                     Quat::from(cgmath::Euler::new(
                         cgmath::Deg(0.0),
@@ -535,8 +543,8 @@ impl engine3d::Game for Game {
                 } else {
                     light_pos
                 };
-                self.light = Light::point(light_pos, self.light.color());
-                engine.set_lights(vec![self.light]);
+                self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
+                engine.set_lights(vec![self.gamesave.light]);
             }
             Mode::Play(false) => {}
             Mode::Options => {}
