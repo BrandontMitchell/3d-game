@@ -311,7 +311,7 @@ impl engine3d::Game for Game {
                     DEPTH,
                     Vec2i(0, 0),
                 );
-                screen.clear(Rgba(0, 50, 200, 0));
+                screen.clear(Rgba(0, 70, 150, 0));
                 let w = pixels.1.width as i32;
                 let h = pixels.1.height as i32;
                 let menu_rect = Rect {
