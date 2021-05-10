@@ -176,109 +176,7 @@ enum Mode {
     EndGame,
 }
 
-/* //not fully implemented
-impl Mode {
-    //update consumes self and yields a new state (which might also just be self)
-    fn modeupdate(self, input: &WinitInputHelper, engine: &mut Engine) -> Self {
-        match self {
-            Mode::Title => {
-                if engine.events.key_held(KeyCode::P) {
-                    Mode::Play(false)
-                }
-                else if engine.events.key_held(KeyCode::O) {
-                    Mode::Options
-                }
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else {
-                    self
-                }
-            }
-            //actively playing
-            Mode::Play(paused) => {
-                //if !paused {
-                    //update game
-                //}
-                if engine.events.key_held(KeyCode::Space) {
-                    Mode::Play(!paused)
-                }
-                else if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else if engine.events.key_held(KeyCode::O) {
-                    Mode::Options
-                }
-                else {
-                    self
-                }
-            }
-            Mode::Options => {
-                if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::P) {
-                    Mode::Play(false)
-                }
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else {
-                    self
-                }
-            }
-            //on play screen while dead
-            Mode::EndGame => {
-                if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::P) {
-                    Mode::Play(false)
-                }
-                else if engine.events.key_held(KeyCode::T) {
-                    Mode::Title
-                }
-                else if engine.events.key_held(KeyCode::Q) {
-                    panic!();
-                }
-                else if engine.events.key_held(KeyCode::O) {
-                    Mode::Options
-                }
-                else {
-                    self
-                }
-            }
-        }
-    }
-    //screen reference needs to be changed
-    fn modedisplay(&self, screen: &mut Screen) {
-        match self {
-            Mode::Title => {
-                //draw a (static?) title
-                screen.clear(Rgba(0, 0, 255, 255));
-                let display_rect = Rect {
-                    x: 0,
-                    y: 0,
-                    w: 250,
-                    h: 51,
-                };
-            }
-            Mode::Play(_paused) => {
-                // Call screen's drawing methods to render the game state
-                screen.clear(Rgba(80, 80, 80, 255));
-            }
-            Mode::Options => {
-                screen.clear(Rgba(0, 0, 0, 255));
-            }
-            Mode::EndGame => { // Draw game result?
-                screen.clear(Rgba(255, 255, 80, 255));
-            }
-        }
-    }
-} */
+
 
 impl engine3d::Game for Game {
     type StaticData = GameData;
@@ -387,12 +285,6 @@ impl engine3d::Game for Game {
         let font: &[u8] = &read(Path::new("content/corbel.ttf")).unwrap();
         let fonts = [Font::from_bytes(font, fontdue::FontSettings::default()).unwrap()];
         (
-            /*             Self {
-                world,
-                pw: vec![],
-                light,
-                mode: Mode::Title,
-            }, */
             Self {
                 gamesave: game_save,
                 pw: vec![],
@@ -424,31 +316,30 @@ impl engine3d::Game for Game {
                     DEPTH,
                     Vec2i(0, 0),
                 );
-                screen.clear(Rgba(0, 0, 255, 0));
-                let w = WIDTH as i32;
-                let h = HEIGHT as i32;
+                screen.clear(Rgba(0, 50, 200, 0));
+                let w = pixels.1.width as i32;
+                let h = pixels.1.height as i32;
                 let menu_rect = Rect {
                     x: w / 6,
-                    y: h / 8,
+                    y: h / 6,
                     w: (2 * w as u16) / 3,
-                    h: (h as u16) / 2,
+                    h: (2* h as u16) / 3,
                 };
-
                 screen.rect(menu_rect, Rgba(20, 0, 100, 255));
                 screen.empty_rect(menu_rect, 4, Rgba(200, 220, 255, 255));
 
                 // example of using text -- need to reset for new sizes
                 let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
                 layout.reset(&LayoutSettings {
-                    x: (WIDTH / 6) as f32,
-                    y: (HEIGHT / 6) as f32,
+                    x: (w / 6) as f32,
+                    y: (h / 2) as f32,
                     max_width: Some(((2 * w) / 3) as f32),
                     horizontal_align: fontdue::layout::HorizontalAlign::Center,
                     ..LayoutSettings::default()
                 });
                 layout.append(
                     &self.fonts.font_list,
-                    &TextStyle::new("hello", 45.0, 0),
+                    &TextStyle::new("Press ENTER to Play", 45.0, 0),
                 );
                 screen.draw_text(
                     &mut self.fonts.rasterized,
