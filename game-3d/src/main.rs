@@ -37,7 +37,7 @@ use winit_input_helper::WinitInputHelper;
 
 //use serde::{Serialize, Deserialize};
 
-const G: f32 = 10.0;
+const G: f32 = 15.0;
 const MAX_PLAYER_VELOCITY: f32 = 20.0;
 const PLANE_ROT_SPEED: f32 = 0.6;
 
@@ -295,6 +295,41 @@ impl engine3d::Game for Game {
         );
         world.add_component(wall, Control((0, 0)));
 
+
+        // invisible walls
+        let wall1 = world.add_entity();
+        world.add_component(
+            wall1,
+            BodyPlane(Plane {
+                n: Vec3::new(1.0, 0.0, 0.0),
+                d: -25.0,
+            }),
+        );
+        let wall2 = world.add_entity();
+        world.add_component(
+            wall2,
+            BodyPlane(Plane {
+                n: Vec3::new(-1.0, 0.0, 0.0),
+                d: -25.0,
+            }),
+        );
+        let wall3 = world.add_entity();
+        world.add_component(
+            wall3,
+            BodyPlane(Plane {
+                n: Vec3::new(0.0, 0.0, 1.0),
+                d: -25.0,
+            }),
+        );
+        let wall4 = world.add_entity();
+        world.add_component(
+            wall4,
+            BodyPlane(Plane {
+                n: Vec3::new(0.0, 0.0, -1.0),
+                d: -25.0,
+            }),
+        );
+
         // player has body, vel, acc, omega, rot, momentum, and mass
         let player = world.add_entity();
         let r = 0.3;
@@ -479,11 +514,12 @@ impl engine3d::Game for Game {
                 // render planes
                 for (id, body) in planes.iter().enumerate() {
                     if let Some(body) = body {
+
                         let ir = engine3d::render::InstanceRaw {
-                            model: (Mat4::from(cgmath::Quaternion::between_vectors(
+                            model: (Mat4::from_translation(body.0.n * body.0.d) * Mat4::from(cgmath::Quaternion::between_vectors(
                                 Vec3::new(0.0, 1.0, 0.0),
                                 body.0.n,
-                            )) * Mat4::from_translation(Vec3::new(0.0, -0.025, 0.0))
+                            ))
                                 * Mat4::from_nonuniform_scale(0.5, 0.05, 0.5))
                             .into(),
                         };
