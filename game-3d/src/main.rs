@@ -719,8 +719,12 @@ impl engine3d::Game for Game {
 
                 // distance away from end ball
                 //let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
-                let distance = spheres.get_mut(&player_id).unwrap().0.c.x - engine.camera_mut().eye.x;
-                // println!("{:.32}", distance.x);
+                let mut distancex = spheres.get_mut(&player_id).unwrap().0.c.x - engine.camera_mut().eye.x;
+                let mut distancey = spheres.get_mut(&player_id).unwrap().0.c.y - engine.camera_mut().eye.y;
+                let mut distance = distancex.abs() + distancey.abs(); 
+                distance = distance / (3 as f32);
+                distance = (25 as f32) - distance;
+                //println!("{}", distance);
 
                 
                 let mut soundplayed = self.soundon;
