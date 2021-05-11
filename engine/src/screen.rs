@@ -1,22 +1,16 @@
 use fontdue::{
-    layout::{GlyphRasterConfig, Layout},
+    layout::{Layout},
     Font, Metrics,
 };
-//use pixels::Pixels;
+
 use std::{
     collections::{hash_map::DefaultHasher, HashMap},
     hash::{Hash, Hasher},
 };
-use winit::window::Window;
+
 
 // We can pull in definitions from elsewhere in the crate!
 use crate::render::{Rect, Rgba, Vec2i};
-use crate::texture::Texture;
-
-// pub struct Screen2d<'fb> {
-//     screen: Screen<'fb>,
-//     pixels: Pixels<Window>,
-// }
 
 pub struct Screen<'fb> {
     framebuffer: &'fb mut [u8],
@@ -102,7 +96,7 @@ impl<'fb> Screen<'fb> {
         // Note: line thickness goes inward
         assert!(line_width < r.w as usize);
         assert!(line_width < r.h as usize);
-        let c = [col.0, col.1, col.2, col.3];
+        //let c = [col.0, col.1, col.2, col.3];
         // Here's the translation
         let r = Rect {
             x: r.x - self.position.0,
@@ -127,7 +121,7 @@ impl<'fb> Screen<'fb> {
         // Note: line thickness goes inward
         assert!(line_width < r.w as usize);
         assert!(line_width < r.h as usize);
-        let c = [col.0, col.1, col.2, col.3];
+        //let c = [col.0, col.1, col.2, col.3];
         // Here's the translation
         let r = Rect {
             x: r.x - self.position.0,
@@ -255,89 +249,4 @@ impl<'fb> Screen<'fb> {
         }
     }
 
-    // pub fn bitblt(&mut self, src: &Texture, from: Rect, Vec2i(to_x, to_y): Vec2i, flipped: bool) {
-    //     let (tw, th) = src.size();
-    //     assert!(0 <= from.x);
-    //     assert!(from.x < tw as i32);
-    //     assert!(0 <= from.y);
-    //     assert!(from.y < th as i32);
-    //     let to_x = to_x - self.position.0;
-    //     let to_y = to_y - self.position.1;
-    //     assert!(src.valid_frame(from));
-    //     if (to_x + from.w as i32) < 0
-    //         || (self.width as i32) <= to_x
-    //         || (to_y + from.h as i32) < 0
-    //         || (self.height as i32) <= to_y
-    //     {
-    //         return;
-    //     }
-    //     let depth = self.depth;
-    //     let src_pitch = tw * th;
-    //     let dst_pitch = self.width * depth;
-    //     // All this rigmarole is just to avoid bounds checks on each pixel of the blit.
-    //     // We want to calculate which row/col of the src image to start at and which to end at.
-    //     // This way there's no need to even check for out of bounds draws.
-    //     let y_skip = to_y.max(0) - to_y;
-    //     let x_skip = to_x.max(0) - to_x;
-    //     let y_count = (to_y + from.h as i32).min(self.height as i32) - to_y;
-    //     let x_count = (to_x + from.w as i32).min(self.width as i32) - to_x;
-    //     // The code above is gnarly so these are just for safety:
-    //     debug_assert!(0 <= x_skip);
-    //     debug_assert!(0 <= y_skip);
-    //     debug_assert!(0 <= x_count);
-    //     debug_assert!(0 <= y_count);
-    //     debug_assert!(x_count <= from.w as i32);
-    //     debug_assert!(y_count <= from.h as i32);
-    //     debug_assert!(0 <= to_x + x_skip);
-    //     debug_assert!(0 <= to_y + y_skip);
-    //     debug_assert!(0 <= from.x + x_skip);
-    //     debug_assert!(0 <= from.y + y_skip);
-    //     debug_assert!(to_x + x_count <= self.width as i32);
-    //     debug_assert!(to_y + y_count <= self.height as i32);
-    //     // OK, let's do some copying now
-    //     let src_buf = src.buffer();
-    //     for (row_a, row_b) in src_buf
-    //         [(src_pitch * (from.y + y_skip) as usize)..(src_pitch * (from.y + y_count) as usize)]
-    //         .chunks_exact(src_pitch)
-    //         .zip(
-    //             self.framebuffer[(dst_pitch * (to_y + y_skip) as usize)
-    //                 ..(dst_pitch * (to_y + y_count) as usize)]
-    //                 .chunks_exact_mut(dst_pitch),
-    //         )
-    //     {
-    //         if flipped {
-    //             let to_cols = row_b
-    //                 [(depth * (to_x + x_skip) as usize)..(depth * (to_x + x_count) as usize)]
-    //                 .chunks_exact_mut(depth).rev();
-    //             let from_cols = row_a
-    //                 [(depth * (from.x + x_skip) as usize)..(depth * (from.x + x_count) as usize)]
-    //                 .chunks_exact(depth);
-    //             // Composite over, assume premultiplied rgba8888
-    //             for (to, from) in to_cols.zip(from_cols) {
-    //                 let ta = to[3] as f32 / 255.0;
-    //                 let fa = from[3] as f32 / 255.0;
-    //                 for i in 0..3 {
-    //                     to[i] = from[i].saturating_add((to[i] as f32 * (1.0 - fa)).round() as u8);
-    //                 }
-    //                 to[3] = ((fa + ta * (1.0 - fa)) * 255.0).round() as u8;
-    //             }
-    //         } else {
-    //             let to_cols = row_b
-    //                 [(depth * (to_x + x_skip) as usize)..(depth * (to_x + x_count) as usize)]
-    //                 .chunks_exact_mut(depth);
-    //             let from_cols = row_a
-    //                 [(depth * (from.x + x_skip) as usize)..(depth * (from.x + x_count) as usize)]
-    //                 .chunks_exact(depth);
-    //             // Composite over, assume premultiplied rgba8888
-    //             for (to, from) in to_cols.zip(from_cols) {
-    //                 let ta = to[3] as f32 / 255.0;
-    //                 let fa = from[3] as f32 / 255.0;
-    //                 for i in 0..3 {
-    //                     to[i] = from[i].saturating_add((to[i] as f32 * (1.0 - fa)).round() as u8);
-    //                 }
-    //                 to[3] = ((fa + ta * (1.0 - fa)) * 255.0).round() as u8;
-    //             }
-    //         }
-    //     }
-    // }
 }

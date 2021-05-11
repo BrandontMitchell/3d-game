@@ -6,8 +6,6 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     platform::run_return::EventLoopExtRunReturn,
 };
-#[macro_use]
-extern crate savefile_derive;
 
 pub mod camera;
 pub mod collision;
@@ -81,7 +79,7 @@ pub fn run<R, G: Game<StaticData = R>>(
     let events = Events::default();
 
     let window_size = window.inner_size();
-    let mut pixels = (
+    let pixels = (
         {
             let surface_texture =
                 SurfaceTexture::new(window_size.width, window_size.height, &window);

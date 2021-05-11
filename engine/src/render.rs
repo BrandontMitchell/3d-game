@@ -306,7 +306,7 @@ impl Render {
     pub(crate) fn update_buffers<R, G: Game<StaticData = R>>(
         &mut self,
         game: &mut G,
-        rules: &R,
+        _rules: &R,
         assets: &mut Assets,
         pixels: &mut (Pixels, PhysicalSize<u32>),
     ) -> bool {

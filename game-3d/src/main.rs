@@ -1,9 +1,8 @@
-use std::{borrow::BorrowMut, fs::read, path::Path};
+use std::{fs::read, path::Path};
 
 use cgmath::{Quaternion, Rotation};
 
 use engine3d::{
-    assets::ModelRef,
     camera_control::CameraController,
     collision,
     components::Component,
@@ -23,23 +22,21 @@ use fontdue::{
     layout::{CoordinateSystem, Layout, LayoutSettings, TextStyle},
     Font,
 };
-use pixels::{Pixels, SurfaceTexture};
+use pixels::{Pixels};
 
 use rand;
 use winit::{self, dpi::PhysicalSize};
 
-use winit_input_helper::WinitInputHelper;
 
 
 const G: f32 = 10.0;
-const END_G: f32 = 100.0;
+//const END_G: f32 = 100.0;
 const MAX_PLAYER_VELOCITY: f32 = 15.0;
 const PLANE_ROT_SPEED: f32 = 0.6;
 const NUM_MARBLES: usize = 10;
 
 const DEPTH: usize = 4;
-const WIDTH: usize = 800;
-const HEIGHT: usize = 500;
+
 
 // All components that are "sparse" are stored in hashmaps
 // The others are in a vec of options
@@ -118,11 +115,7 @@ impl Component for Mass {
 }
 
 
-extern crate savefile;
-use savefile::prelude::*;
 
-#[macro_use]
-extern crate savefile_derive;
 struct GameSave {
     world: World,
     light: Light,
@@ -138,10 +131,12 @@ struct Game {
     sound: Sound,
     soundon: bool,
 }
-
+#[allow(dead_code)]
 impl Game {
     fn integrate(&mut self) {}
 }
+
+#[allow(dead_code)]
 struct GameData {
     wall_model: engine3d::assets::ModelRef,
     player_model: engine3d::assets::ModelRef,
@@ -453,7 +448,7 @@ impl engine3d::Game for Game {
                 pixels.0.render().unwrap();
                 return true;
             }
-            Mode::Play(live) => {
+            Mode::Play(_live) => {
                 // need shapes, their rotations, and their models
                 let spheres = self
                     .gamesave
@@ -548,19 +543,19 @@ impl engine3d::Game for Game {
                 }
             }
             Mode::EndGame => {}
-            Mode::Play(live) => {
+            Mode::Play(_live) => {
                 if engine.events.key_held(KeyCode::O) {
                     self.mode = Mode::Options;
                 } else if engine.events.key_held(KeyCode::Q) {
                     panic!();
                 }
                 self.camera_controller.update(engine);
-                let mut accs = self
+                let accs = self
                     .gamesave
                     .world
                     .borrow_components_sparse_mut::<Acceleration>()
                     .unwrap();
-                let mut omegas = self
+                let omegas = self
                     .gamesave
                     .world
                     .borrow_components_mut::<Omega>()
@@ -634,7 +629,7 @@ impl engine3d::Game for Game {
                     .world
                     .borrow_components_sparse_mut::<LinearMomentum>()
                     .unwrap();
-                let mut masses = self
+                let masses = self
                     .gamesave
                     .world
                     .borrow_components_sparse_mut::<Mass>()
@@ -694,7 +689,7 @@ impl engine3d::Game for Game {
                     target.clear();
                 } else {
                     end_ids = vec![];
-                    for (id, s) in end_spheres.iter() {
+                    for (id, _s) in end_spheres.iter() {
                         end_ids.push(*id);
                     }
                 }
@@ -717,10 +712,9 @@ impl engine3d::Game for Game {
                 collision::restitute_dyn_dyn(&mut pb, &mut pv, &mut eb, &mut ev, &mut self.pe);
 
 
-                // distance away from end ball
-                //let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
-                let mut distancex = spheres.get_mut(&player_id).unwrap().0.c.x - engine.camera_mut().eye.x;
-                let mut distancey = spheres.get_mut(&player_id).unwrap().0.c.y - engine.camera_mut().eye.y;
+                // camera distance away from rolling ball
+                let distancex = spheres.get_mut(&player_id).unwrap().0.c.x - engine.camera_mut().eye.x;
+                let distancey = spheres.get_mut(&player_id).unwrap().0.c.y - engine.camera_mut().eye.y;
                 let mut distance = distancex.abs() + distancey.abs(); 
                 distance = distance / (3 as f32);
                 distance = (25 as f32) - distance;
@@ -791,7 +785,7 @@ impl engine3d::Game for Game {
                 // lights
                 // right now the light follows the player -- change to target sphere
                 match self.mode {
-                    Mode::Play(live) => {
+                    Mode::Play(_live) => {
                         let target_r = end_spheres.get_mut(&self.gamesave.target).unwrap().0.r;
                     let target_pos = end_spheres.get_mut(&self.gamesave.target).unwrap().0.c;
                     let light_pos = Pos3::new(target_pos.x, target_pos.y + target_r + 0.5, target_pos.z);
