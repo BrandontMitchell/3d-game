@@ -13,7 +13,8 @@ use engine3d::{
     render::{InstanceGroups, Rect, Rgba, Vec2i},
     run,
     screen::Screen,
-    sound::Sound,
+    //sound::Sound,
+    lights::Sound,
     text::Fonts,
     world::World,
     Engine, DT,
@@ -159,6 +160,7 @@ struct Game {
     mode: Mode,
     camera_controller: CameraController,
     fonts: Fonts,
+    sound: Sound,
 }
 
 impl Game {
@@ -284,6 +286,13 @@ impl engine3d::Game for Game {
             light: light,
         };
         let camera_controller = CameraController::new(0.2);
+        
+        let mut game_sound = Sound::new();
+        let _ = game_sound.init_manager();
+        game_sound.add_sound("jump".to_string(), "./content/jump.mp3".to_string());
+        game_sound.add_sound("hit".to_string(), "./content/hit.mp3".to_string());
+        game_sound.add_sound("pass".to_string(), "./content/pass.mp3".to_string());
+        game_sound.add_sound("sounds".to_string(), "./content/sounds.mp3".to_string());
 
         let font: &[u8] = &read(Path::new("content/corbel.ttf")).unwrap();
         let fonts = [Font::from_bytes(font, fontdue::FontSettings::default()).unwrap()];
@@ -293,6 +302,7 @@ impl engine3d::Game for Game {
                 pw: vec![],
                 pe: vec![],
                 mode: Mode::Title,
+                sound: game_sound,
                 camera_controller,
                 fonts: Fonts::new(fonts),
             },
@@ -633,7 +643,8 @@ impl engine3d::Game for Game {
                 collision::gather_contacts_ab(&pb, &eb, &mut self.pe);
 
                 if self.pe.len() > 0 {
-                    println!("END");
+                    //println!("END");
+                    self.sound.play_sound("pass".to_string());
                 };
                 spheres.get_mut(&player_id).unwrap().0 = pb[0];
                 ps.get_mut(&player_id).unwrap().0 = pp[0];
@@ -724,9 +735,7 @@ fn main() {
 
     let mut mode = Mode::Title;
 
-    let mut game_sound = Sound::new();
-    let _ = game_sound.init_manager();
-    game_sound.add_sound("jump".to_string(), "./content/jump.mp3".to_string());
+
 
     //let camera_position = Vec2i(0,0);
 
