@@ -691,6 +691,7 @@ impl engine3d::Game for Game {
                     } else {
                         self.gamesave.target = end_ids[rng.gen_range(0..end_ids.len())];
                     }
+                    target.clear();
                 } else {
                     end_ids = vec![];
                     for (id, s) in end_spheres.iter() {
@@ -717,13 +718,13 @@ impl engine3d::Game for Game {
 
 
                 // distance away from end ball
-                let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
-                println!("{:.32}", distance.x);
+                // let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
+                // println!("{:.32}", distance.x);
 
                 
                 let mut soundplayed = self.soundon;
 
-                if !soundplayed && self.pe.len() > 0 {
+                if !soundplayed && target.len() == 0 {
                     //println!("END");
                     self.sound.play_sound("jump".to_string());
                     soundplayed = true;
