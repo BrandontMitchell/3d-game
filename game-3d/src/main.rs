@@ -161,6 +161,7 @@ struct Game {
     camera_controller: CameraController,
     fonts: Fonts,
     sound: Sound,
+    soundon: bool,
 }
 
 impl Game {
@@ -305,6 +306,7 @@ impl engine3d::Game for Game {
                 sound: game_sound,
                 camera_controller,
                 fonts: Fonts::new(fonts),
+                soundon : false,
             },
             GameData {
                 wall_model,
@@ -642,10 +644,17 @@ impl engine3d::Game for Game {
                 collision::restitute_dyn_stat(&mut eb, &ev, &mut ep, &em, &walls, &mut self.pw);
                 collision::gather_contacts_ab(&pb, &eb, &mut self.pe);
 
-                if self.pe.len() > 0 {
+                let mut soundplayed = self.soundon;
+
+                if !soundplayed && self.pe.len() > 0 {
                     //println!("END");
-                    self.sound.play_sound("pass".to_string());
-                };
+                    self.sound.play_sound("jump".to_string());
+                    soundplayed = true;
+                } else {
+                    soundplayed = false;
+                }
+                self.soundon = soundplayed;
+
                 spheres.get_mut(&player_id).unwrap().0 = pb[0];
                 ps.get_mut(&player_id).unwrap().0 = pp[0];
                 end_spheres.get_mut(&end_id).unwrap().0 = eb[0];
