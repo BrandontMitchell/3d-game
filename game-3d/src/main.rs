@@ -642,6 +642,9 @@ impl engine3d::Game for Game {
                 collision::restitute_dyn_stat(&mut eb, &ev, &mut ep, &em, &walls, &mut self.pw);
                 collision::gather_contacts_ab(&pb, &eb, &mut self.pe);
 
+                let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
+                println!("{:.32}", distance.x);
+
                 if self.pe.len() > 0 {
                     //println!("END");
                     self.sound.play_sound("pass".to_string());
