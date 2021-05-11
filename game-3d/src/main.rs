@@ -37,10 +37,11 @@ use winit_input_helper::WinitInputHelper;
 
 //use serde::{Serialize, Deserialize};
 
-const G: f32 = 15.0;
+const G: f32 = 10.0;
 const END_G: f32 = 100.0;
-const MAX_PLAYER_VELOCITY: f32 = 20.0;
+const MAX_PLAYER_VELOCITY: f32 = 15.0;
 const PLANE_ROT_SPEED: f32 = 0.6;
+const NUM_MARBLES: usize = 10;
 
 const DEPTH: usize = 4;
 const WIDTH: usize = 800;
@@ -147,6 +148,7 @@ extern crate savefile_derive;
 struct GameSave {
     world: World,
     light: Light,
+    target: usize,
 }
 //#[derive(Clone, Serialize, Deserialize)]
 //#[repr(C)]
@@ -249,38 +251,47 @@ impl engine3d::Game for Game {
         let mass = (r * 4.0).powi(3);
         world.add_component(player, Mass(mass));
 
-        let end_sphere = world.add_entity();
-        let r = 0.8;
-        world.add_component(
-            end_sphere,
-            EndSphere(Sphere {
-                c: Pos3::new(0.0, 3.0, 5.0), // todo make random and match plane height
-                r,
-            }),
-        );
-        world.add_component(end_sphere, Velocity(Vec3::zero()));
-        world.add_component(end_sphere, Acceleration(Vec3::zero()));
-        world.add_component(end_sphere, Omega(Vec3::zero()));
-        world.add_component(end_sphere, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
-        world.add_component(end_sphere, LinearMomentum(Vec3::zero()));
-        let mass = (r * 4.0).powi(3);
-        world.add_component(end_sphere, Mass(mass));
-
-        // add models to wall and player
         let wall_model = engine.load_model("floor.obj");
         let player_model = engine.load_model("sphere.obj");
         let end_model = engine.load_model("sphere_white.obj");
+
+        use rand::Rng;
+        let mut rng = rand::thread_rng();
+        let mut target = 0;
+        for _ in 0..NUM_MARBLES {
+            let end_sphere = world.add_entity();
+            target = end_sphere;
+            let r = rng.gen_range(0.3..1.0);
+            let x = rng.gen_range(-20.0..20.0);
+            let z = rng.gen_range(-20.0..20.0);
+            world.add_component(
+                end_sphere,
+                EndSphere(Sphere {
+                    c: Pos3::new(x, 5.0, z),
+                    r,
+                }),
+            );
+            world.add_component(end_sphere, Velocity(Vec3::zero()));
+            world.add_component(end_sphere, Acceleration(Vec3::zero()));
+            world.add_component(end_sphere, Omega(Vec3::zero()));
+            world.add_component(end_sphere, Rot(Quat::new(1.0, 0.0, 0.0, 0.0)));
+            world.add_component(end_sphere, LinearMomentum(Vec3::zero()));
+            let mass = (r * 4.0).powi(3);
+            world.add_component(end_sphere, Mass(mass));
+            world.add_component(end_sphere, Model(end_model));
+
+        }
         world.add_component(wall, Model(wall_model));
         world.add_component(player, Model(player_model));
-        world.add_component(end_sphere, Model(end_model));
 
 
         engine.set_ambient(0.05);
         let light = Light::spot(Pos3::new(0.0, 1.0, 0.0), Vec3::new(0.0, 1.0, 0.0), Vec3::new(1.0, 1.0, 1.0));
 
         let game_save = GameSave {
-            world: world,
-            light: light,
+            world,
+            light,
+            target,
         };
         let camera_controller = CameraController::new(0.2);
 
@@ -334,7 +345,24 @@ impl engine3d::Game for Game {
                 let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
                 layout.reset(&LayoutSettings {
                     x: (w / 6) as f32,
-                    y: (h / 2) as f32,
+                    y: (h / 4) as f32,
+                    max_width: Some(((2 * w) / 3) as f32),
+                    horizontal_align: fontdue::layout::HorizontalAlign::Center,
+                    ..LayoutSettings::default()
+                });
+                layout.append(
+                    &self.fonts.font_list,
+                    &TextStyle::new("Hit the ball with the light source!", 45.0, 0),
+                );
+                screen.draw_text(
+                    &mut self.fonts.rasterized,
+                    &self.fonts.font_list[0],
+                    &mut layout,
+                    Rgba(255, 255, 255, 255),
+                );
+                layout.reset(&LayoutSettings {
+                    x: (w / 6) as f32,
+                    y: (3*h / 4) as f32,
                     max_width: Some(((2 * w) / 3) as f32),
                     horizontal_align: fontdue::layout::HorizontalAlign::Center,
                     ..LayoutSettings::default()
@@ -615,29 +643,54 @@ impl engine3d::Game for Game {
                 let mut ev = vec![];
                 let mut ep = vec![];
                 let mut em = vec![];
-                let mut end_id = 0;
+                let mut end_ids = vec![];
+                let mut target = vec![];
 
                 for (id, s) in end_spheres.iter() {
-                    end_id = *id;
+                    if *id == self.gamesave.target {
+                        target.push(s.0);
+                    } else {
+                        end_ids.push(*id);
+                    }
+                }
+                collision::gather_contacts_ab(&pb, &target, &mut self.pe);
+                use rand::Rng;
+                let mut rng = rand::thread_rng();
+                if self.pe.len() > 0 {
+                    end_spheres.remove(&self.gamesave.target);
+                    if end_ids.len() == 0 {
+                        self.mode = Mode::EndGame;
+                    } else {
+                        self.gamesave.target = end_ids[rng.gen_range(0..end_ids.len())];
+                    }
+                } else {
+                    end_ids = vec![];
+                    for (id, s) in end_spheres.iter() {
+                        end_ids.push(*id);
+                    }
+                }
+                for (id, s) in end_spheres.iter() {
                     eb.push(s.0);
                     ev.push(vels[&id].0);
                     ep.push(ps[&id].0);
                     em.push(masses[&id].0);
                 }
+                self.pe.clear();
 
                 collision::gather_contacts_ab(&pb, &walls, &mut self.pw);
                 collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
                 collision::gather_contacts_ab(&eb, &walls, &mut self.pw);
                 collision::restitute_dyn_stat(&mut eb, &ev, &mut ep, &em, &walls, &mut self.pw);
-                collision::gather_contacts_ab(&pb, &eb, &mut self.pe);
+                collision::gather_contacts_aa(&eb, &mut self.pw);
+                collision::restitute_dyns(&mut eb, &mut ev, &mut self.pe);
 
-                if self.pe.len() > 0 {
-                    println!("END");
-                };
                 spheres.get_mut(&player_id).unwrap().0 = pb[0];
                 ps.get_mut(&player_id).unwrap().0 = pp[0];
-                end_spheres.get_mut(&end_id).unwrap().0 = eb[0];
-                ps.get_mut(&end_id).unwrap().0 = ep[0];
+
+                for (i, id) in end_ids.iter().enumerate() {
+                    end_spheres.get_mut(&id).unwrap().0 = eb[i];
+                    ps.get_mut(&id).unwrap().0 = ep[i];
+                }
 
                 // update spheres (apply gravity, momentum, etc)
                 for (id, body) in spheres.iter_mut() {
@@ -647,7 +700,7 @@ impl engine3d::Game for Game {
                     if let Some(r) = &mut rots[*id] {
                         if let Some(o) = &omegas[*id] {
                             ps.get_mut(&id).unwrap().0 +=
-                                ((r.0 * a.0) + Vec3::new(0.0, -G, 0.0)) * DT;
+                                ((r.0 * a.0) + Vec3::new(0.0, -G * m.0, 0.0)) * DT;
                             vels.get_mut(&id).unwrap().0 = ps[&id].0 / m.0;
                             vels.get_mut(&id).unwrap().0 *= 0.98; // friction
                             if vels[&id].0.magnitude() > MAX_PLAYER_VELOCITY {
@@ -668,20 +721,24 @@ impl engine3d::Game for Game {
                     if let Some(r) = &mut rots[*id] {
                         if let Some(o) = &omegas[*id] {
                             ps.get_mut(&id).unwrap().0 +=
-                                ((r.0 * a.0) + Vec3::new(0.0, -END_G*2.0, 0.0)) * DT;
+                                (r.0 * a.0) + Vec3::new(0.0, -G, 0.0);
                             vels.get_mut(&id).unwrap().0 = ps[&id].0 / m.0;
-                            vels.get_mut(&id).unwrap().0 *= 1.0; // friction
-                            body.0.c += Vec3::new(0.0, 1.0*-DT, 0.0);
+                            vels.get_mut(&id).unwrap().0 *= 0.98; // friction
+                            if vels[&id].0.magnitude() > MAX_PLAYER_VELOCITY {
+                                vels.get_mut(&id).unwrap().0 =
+                                    vels[&id].0.normalize_to(MAX_PLAYER_VELOCITY);
+                            }
+                            body.0.c += vels[&id].0 * DT;
                             r.0 += 0.5 * DT * Quat::new(0.0, o.0.x, o.0.y, o.0.z) * r.0;
                         }
                     }
                 }
 
                 // lights
-                let player_r = spheres.get_mut(&player_id).unwrap().0.r;
-                let player_pos = spheres.get_mut(&player_id).unwrap().0.c;
-                let light_pos = Pos3::new(player_pos.x, player_pos.y + player_r + 0.5, player_pos.z);
-                //let light_pos = self.gamesave.light.position();
+                // right now the light follows the player -- change to target sphere
+                let target_r = end_spheres.get_mut(&self.gamesave.target).unwrap().0.r;
+                let target_pos = end_spheres.get_mut(&self.gamesave.target).unwrap().0.c;
+                let light_pos = Pos3::new(target_pos.x, target_pos.y + target_r + 0.5, target_pos.z);
                 let light_pos = if engine.events.key_held(KeyCode::A) {
                     Quat::from(cgmath::Euler::new(
                         cgmath::Deg(0.0),
@@ -700,8 +757,6 @@ impl engine3d::Game for Game {
                     light_pos
                 };
                 self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
-                //println!("{:?}", light_pos);
-                //self.gamesave.light = Light::spot(light_pos, Vec3::new(0.0,1.0, 0.0), self.gamesave.light.color());
                 engine.set_lights(vec![self.gamesave.light]);
             }
         }

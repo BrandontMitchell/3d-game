@@ -90,8 +90,8 @@ impl World {
         }
     }
 
-    // remove an entity from the world
-    pub fn remove_entity<ComponentType: 'static>(&mut self, id: usize) {
+    // remove a component from an entity from the world
+    pub fn remove_component<ComponentType: 'static>(&mut self, id: usize, c: ComponentType) {
         for component_vec in self.components.iter_mut() {
             if let Some(component_vec) = component_vec
                 .as_any_mut()
