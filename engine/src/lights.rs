@@ -85,15 +85,6 @@ impl Sound {
         let map_element = self.sound_map.get_mut(&name);
         match map_element {
             Some(sound_handle) => {
-                //sound_handle.play_sound(0, InstanceSettings::new().volume(distance));
-                //let mut instance = sound_handle.play(InstanceSettings::default());
-                //let mut instance = sound_handle.play(InstanceSettings::volume(instance, distance));
-                //let mut instance = sound_handle.play(InstanceSettings(volume: distance));
-                //let mut instance = sound_handle.play(InstanceSettings::default());
-                //instance.volume(distance);
-
-                //let mut instance = sound_handle.play(InstanceSettings::default());
-                //let mut instance = sound_handle.play(InstanceSettings::volume(instance, 2));
                 let mut instance = sound_handle.play(InstanceSettings::new().volume(distance));
             },
             None => println!("missing sound"), 
