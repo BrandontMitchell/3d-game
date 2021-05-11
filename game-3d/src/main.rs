@@ -715,6 +715,12 @@ impl engine3d::Game for Game {
                 collision::gather_contacts_ab(&pb, &eb, &mut self.pe);
                 collision::restitute_dyn_dyn(&mut pb, &mut pv, &mut eb, &mut ev, &mut self.pe);
 
+
+                // distance away from end ball
+                let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
+                println!("{:.32}", distance.x);
+
+                
                 let mut soundplayed = self.soundon;
 
                 if !soundplayed && self.pe.len() > 0 {
