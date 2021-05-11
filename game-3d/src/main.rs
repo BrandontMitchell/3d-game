@@ -27,17 +27,9 @@ use pixels::{Pixels, SurfaceTexture};
 
 use rand;
 use winit::{self, dpi::PhysicalSize};
-//use winit::window::WindowBuilder;
 
 use winit_input_helper::WinitInputHelper;
-//use winit::event::{Event, VirtualKeyCode};
-// extern crate savefile;
 
-// use savefile::prelude::*;
-
-// extern crate savefile_derive;
-
-//use serde::{Serialize, Deserialize};
 
 const G: f32 = 10.0;
 const END_G: f32 = 100.0;
@@ -125,36 +117,17 @@ impl Component for Mass {
     }
 }
 
-/* #[macro_use]
+
 extern crate savefile;
 use savefile::prelude::*;
-#[macro_use]
-use savefile::{WithSchema, Serialize, Deserialize};
 
 #[macro_use]
 extern crate savefile_derive;
-
-
-#[derive(Copy, Serialize, Deserialize)] */
-//#[derive(Savefile)]
-//#[derive()]
-//#[derive(Clone, Copy, Savefile)]
-extern crate savefile;
-use savefile::prelude::*;
-//use savefile::{Serialize, Deserialize};
-
-#[macro_use]
-extern crate savefile_derive;
-//use savefile_derive::Savefile;
-//#[derive(Savefile)] /////////////////////////comment out this line to get rid of error
 struct GameSave {
     world: World,
     light: Light,
     target: usize,
 }
-//#[derive(Clone, Serialize, Deserialize)]
-//#[repr(C)]
-//#[derive(Savefile)]
 struct Game {
     gamesave: GameSave,
     pw: Vec<collision::Contact<usize>>,
@@ -394,7 +367,49 @@ impl engine3d::Game for Game {
                 pixels.0.render().unwrap();
                 return true;
             }
-            Mode::EndGame => {}
+            Mode::EndGame => {
+                let mut screen = Screen::wrap(
+                    pixels.0.get_frame(),
+                    pixels.1.width as usize,
+                    pixels.1.height as usize,
+                    DEPTH,
+                    Vec2i(0, 0),
+                );
+                screen.clear(Rgba(0, 70, 150, 0));
+                let w = pixels.1.width as i32;
+                let h = pixels.1.height as i32;
+                let menu_rect = Rect {
+                    x: w / 6,
+                    y: h / 6,
+                    w: (2 * w as u16) / 3,
+                    h: (2* h as u16) / 3,
+                };
+                screen.rect(menu_rect, Rgba(20, 0, 100, 255));
+                screen.empty_rect(menu_rect, 4, Rgba(200, 220, 255, 255));
+
+                // example of using text -- need to reset for new sizes
+                let mut layout = Layout::new(CoordinateSystem::PositiveYDown);
+                layout.reset(&LayoutSettings {
+                    x: (w / 6) as f32,
+                    y: (h / 2) as f32,
+                    max_width: Some(((2 * w) / 3) as f32),
+                    horizontal_align: fontdue::layout::HorizontalAlign::Center,
+                    ..LayoutSettings::default()
+                });
+                layout.append(
+                    &self.fonts.font_list,
+                    &TextStyle::new("You win!", 45.0, 0),
+                );
+                screen.draw_text(
+                    &mut self.fonts.rasterized,
+                    &self.fonts.font_list[0],
+                    &mut layout,
+                    Rgba(255, 255, 255, 255),
+                );
+
+                pixels.0.render().unwrap();
+                return true;
+            }
             Mode::Options => {
                 let mut screen = Screen::wrap(
                     pixels.0.get_frame(),
@@ -787,30 +802,10 @@ impl engine3d::Game for Game {
     }
 }
 
-/* fn save_game(game:&Game) {
-    save_file("save_marble.bin", 0, game).unwrap();
-}
-
-fn load_game() -> Game {
-    load_file("save_marble.bin", 0).unwrap()
-}  */
-
 fn main() {
     env_logger::init();
     let title = env!("CARGO_PKG_NAME");
     let window = winit::window::WindowBuilder::new().with_title(title);
-
-    let mut mode = Mode::Title;
-
-
-
-    //let camera_position = Vec2i(0,0);
-
-    //pixels.get_frame() needs to be replaced with framebuffer that works with render & its buffers
-    //let mut screen = Screen::wrap(pixels.get_frame(), WIDTH, HEIGHT, DEPTH, camera_position);
-    //screen.clear(CLEAR_COL);
-
-    //mode.display(&mut screen);
 
     run::<GameData, Game>(window, std::path::Path::new("content"));
 }
