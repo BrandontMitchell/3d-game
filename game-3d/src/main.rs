@@ -709,8 +709,11 @@ impl engine3d::Game for Game {
                 collision::restitute_dyn_stat(&mut pb, &pv, &mut pp, &pm, &walls, &mut self.pw);
                 collision::gather_contacts_ab(&eb, &walls, &mut self.pw);
                 collision::restitute_dyn_stat(&mut eb, &ev, &mut ep, &em, &walls, &mut self.pw);
-                collision::gather_contacts_aa(&eb, &mut self.pw);
+                collision::gather_contacts_aa(&eb, &mut self.pe);
                 collision::restitute_dyns(&mut eb, &mut ev, &mut self.pe);
+                self.pe.clear();
+                collision::gather_contacts_ab(&pb, &eb, &mut self.pe);
+                collision::restitute_dyn_dyn(&mut pb, &mut pv, &mut eb, &mut ev, &mut self.pe);
 
                 let mut soundplayed = self.soundon;
 
@@ -775,28 +778,33 @@ impl engine3d::Game for Game {
 
                 // lights
                 // right now the light follows the player -- change to target sphere
-                let target_r = end_spheres.get_mut(&self.gamesave.target).unwrap().0.r;
-                let target_pos = end_spheres.get_mut(&self.gamesave.target).unwrap().0.c;
-                let light_pos = Pos3::new(target_pos.x, target_pos.y + target_r + 0.5, target_pos.z);
-                let light_pos = if engine.events.key_held(KeyCode::A) {
-                    Quat::from(cgmath::Euler::new(
-                        cgmath::Deg(0.0),
-                        cgmath::Deg(-90.0 * DT),
-                        cgmath::Deg(0.0),
-                    ))
-                    .rotate_point(light_pos)
-                } else if engine.events.key_held(KeyCode::D) {
-                    Quat::from(cgmath::Euler::new(
-                        cgmath::Deg(0.0),
-                        cgmath::Deg(90.0 * DT),
-                        cgmath::Deg(0.0),
-                    ))
-                    .rotate_point(light_pos)
-                } else {
-                    light_pos
-                };
-                self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
-                engine.set_lights(vec![self.gamesave.light]);
+                match self.mode {
+                    Mode::Play(live) => {
+                        let target_r = end_spheres.get_mut(&self.gamesave.target).unwrap().0.r;
+                    let target_pos = end_spheres.get_mut(&self.gamesave.target).unwrap().0.c;
+                    let light_pos = Pos3::new(target_pos.x, target_pos.y + target_r + 0.5, target_pos.z);
+                    let light_pos = if engine.events.key_held(KeyCode::A) {
+                        Quat::from(cgmath::Euler::new(
+                            cgmath::Deg(0.0),
+                            cgmath::Deg(-90.0 * DT),
+                            cgmath::Deg(0.0),
+                        ))
+                        .rotate_point(light_pos)
+                    } else if engine.events.key_held(KeyCode::D) {
+                        Quat::from(cgmath::Euler::new(
+                            cgmath::Deg(0.0),
+                            cgmath::Deg(90.0 * DT),
+                            cgmath::Deg(0.0),
+                        ))
+                        .rotate_point(light_pos)
+                    } else {
+                        light_pos
+                    };
+                    self.gamesave.light = Light::point(light_pos, self.gamesave.light.color());
+                    engine.set_lights(vec![self.gamesave.light]);
+                    },
+                    _ => (),
+                }
             }
         }
     }
