@@ -1,7 +1,9 @@
+
 use crate::geom::*;
 use std::collections::HashMap;
 use kira::sound::handle::SoundHandle;
 use kira::instance::InstanceSettings;
+//use kira::instance::InstanceSettings;
 use kira::sound::SoundSettings;
 use kira::manager::AudioManagerSettings;
 use kira::manager::AudioManager;
@@ -79,10 +81,21 @@ impl Sound {
             None => println!("missing manager"),
         }
     }
-    pub fn play_sound(&mut self, name: String) {
+    pub fn play_sound(&mut self, name: String, distance: f64) {
         let map_element = self.sound_map.get_mut(&name);
         match map_element {
-            Some(sound_handle) => {let _ = sound_handle.play(InstanceSettings::default());},
+            Some(sound_handle) => {
+                //sound_handle.play_sound(0, InstanceSettings::new().volume(distance));
+                //let mut instance = sound_handle.play(InstanceSettings::default());
+                //let mut instance = sound_handle.play(InstanceSettings::volume(instance, distance));
+                //let mut instance = sound_handle.play(InstanceSettings(volume: distance));
+                //let mut instance = sound_handle.play(InstanceSettings::default());
+                //instance.volume(distance);
+
+                //let mut instance = sound_handle.play(InstanceSettings::default());
+                //let mut instance = sound_handle.play(InstanceSettings::volume(instance, 2));
+                let mut instance = sound_handle.play(InstanceSettings::new().volume(distance));
+            },
             None => println!("missing sound"), 
         }
     }

@@ -718,7 +718,7 @@ impl engine3d::Game for Game {
 
 
                 // distance away from end ball
-                // let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
+                let distance = spheres.get_mut(&player_id).unwrap().0.c - end_spheres.get_mut(&end_id).unwrap().0.c;
                 // println!("{:.32}", distance.x);
 
                 
@@ -726,7 +726,7 @@ impl engine3d::Game for Game {
 
                 if !soundplayed && target.len() == 0 {
                     //println!("END");
-                    self.sound.play_sound("jump".to_string());
+                    self.sound.play_sound("jump".to_string(), distance as f64);
                     soundplayed = true;
                 } else {
                     soundplayed = false;
