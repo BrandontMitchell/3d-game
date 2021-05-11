@@ -723,6 +723,11 @@ fn main() {
     let window = winit::window::WindowBuilder::new().with_title(title);
 
     let mut mode = Mode::Title;
+
+    let mut game_sound = Sound::new();
+    let _ = game_sound.init_manager();
+    game_sound.add_sound("jump".to_string(), "./content/jump.mp3".to_string());
+
     //let camera_position = Vec2i(0,0);
 
     //pixels.get_frame() needs to be replaced with framebuffer that works with render & its buffers
